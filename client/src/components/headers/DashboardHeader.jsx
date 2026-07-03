@@ -12,7 +12,6 @@ export const DashboardHeader = () => {
       </h1>
       
       <div className="flex items-center gap-4">
-        {/* Uždirbtos sumos indikatorius */}
         <div className="flex items-center gap-1.5 text-[13px] font-bold text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-3 py-1 rounded-full border border-green-200 dark:border-green-800/50">
           <MdEuro size={14} />
           <span>{totalEarnings.toLocaleString()}</span>

@@ -3,8 +3,8 @@ import { useStore } from '../store/useStore';
 import { Link, useLocation } from 'react-router-dom';
 import {
   MdDarkMode, MdLightMode, MdExitToApp, MdSecurity, 
-  MdTrendingUp, MdEmail, MdPerson, MdDashboard, 
-  MdVpnKey, MdSettings
+  MdTrendingUp, MdPerson, MdDashboard, 
+  MdVpnKey, MdEmail, MdSettings
 } from 'react-icons/md';
 
 export const TopNavbar = () => {
@@ -31,6 +31,7 @@ export const TopNavbar = () => {
       );
     } else if (role === 'marketing') {
       links.push(
+        { name: 'Klientų tvarkyklė', path: '/', icon: <MdDashboard size={14} /> },
         { name: 'Emailer', path: '/email', icon: <MdEmail size={14} /> },
         { name: 'Profilis', path: '/profile', icon: <MdSettings size={14} /> }
       );

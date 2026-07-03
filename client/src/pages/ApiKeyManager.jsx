@@ -1,17 +1,23 @@
-import { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useStore, TAG_PRIORITY } from '../store/useStore';
 import { ApiKeyHeader } from '../components/headers/ApiKeyHeader';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { TagBadge } from '../components/TagBadge';
-import StatusMessage from '../components/StatusMessage';
+import { ClientCard } from '../components/ClientCard';
 import { 
   MdDelete, MdVpnKey, MdPerson, MdShield, 
-  MdBlock, MdContentCopy, MdSecurity, MdTrendingUp, 
-  MdClose, MdInfoOutline, MdSearch, MdList, MdBadge
+  MdSecurity, MdTrendingUp, MdClose, MdInfoOutline, 
+  MdSearch, MdList, MdBadge, MdCheckCircle, MdError, 
+  MdArrowBack, MdPeople, MdBolt, MdBlock
 } from 'react-icons/md';
 
 const ApiKeyProfileModal = ({ user, clients, onClose }) => {
   const [searchTerm, setSearchTerm] = useState('');
+
+  const totalUserClientsCount = useMemo(() => {
+    if (!user) return 0;
+    return clients.filter(c => c.marketer === user.owner).length;
+  }, [clients, user]);
 
   const userClients = useMemo(() => {
     if (!user) return [];
@@ -29,102 +35,118 @@ const ApiKeyProfileModal = ({ user, clients, onClose }) => {
   const inputClass = "w-full px-3 py-2 text-[13px] rounded border border-[#dadce0] dark:border-[#5f6368] bg-white dark:bg-[#202124] text-[#202124] dark:text-[#e8eaed] focus:border-[#1a73e8] focus:outline-none transition-all";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-[#f8f9fa] dark:bg-[#1e1e1e] w-full max-w-4xl max-h-[90vh] rounded-lg shadow-2xl overflow-hidden flex flex-col border border-gray-200 dark:border-gray-800">
-
-        <div className="p-4 border-b border-[#dadce0] dark:border-[#3c4043] flex items-center justify-between gap-3">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-[#f8f9fa] dark:bg-[#1e1e1e] h-[62vh] w-full max-w-5xl rounded-lg shadow-xl overflow-hidden flex flex-col border border-[#dadce0] dark:border-[#3c4043]">
+        <div className="p-6 bg-white dark:bg-[#292a2d] border-b border-[#dadce0] dark:border-[#3c4043] flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
-              <MdPerson size={20} className="text-[#1a73e8]" />
+              <MdPerson size={24} className="text-[#1a73e8]" />
             </div>
-            <h2 className="text-[14px] text-[#202124] dark:text-[#e8eaed] uppercase tracking-wider font-bold">Vartotojo profilio apžvalga</h2>
+            <h2 className="text-[16px] font-medium text-[#202124] dark:text-[#e8eaed]">Vartotojo profilio apžvalga</h2>
           </div>
           <button onClick={onClose} className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors">
             <MdClose size={20} />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6">
-          <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-            <div className="bg-white dark:bg-[#292a2d] border border-[#dadce0] dark:border-[#3c4043] rounded shadow-sm flex flex-col h-full">
-              <div className="p-4 border-b border-[#dadce0] dark:border-[#3c4043] flex items-center gap-3">
-                <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
-                  <MdPerson size={20} className="text-[#1a73e8]" />
+        <div className="p-6 bg-[#f8f9fa] dark:bg-[#1e1e1e]">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+            <div className="bg-white dark:bg-[#292a2d] border border-[#dadce0] dark:border-[#3c4043] rounded shadow-sm flex flex-col h-[47.5vh]">
+              <div className="p-6 border-b border-[#dadce0] dark:border-[#3c4043] flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
+                    <MdPerson size={24} className="text-[#1a73e8]" />
+                  </div>
+                  <h2 className="text-[16px] font-medium text-[#202124] dark:text-[#e8eaed]">Paskyros duomenys</h2>
                 </div>
-                <h2 className="text-[14px] text-[#202124] dark:text-[#e8eaed] tracking-wider uppercase font-bold">Paskyros duomenys</h2>
               </div>
 
               <div className="p-6 space-y-6">
                 <div>
                   <div className="text-[14px] font-medium text-[#202124] dark:text-[#e8eaed]">{user?.name || user?.owner || 'Nenustatyta'}</div>
-                  <div className="text-[12px] text-[#5f6368] dark:text-[#9aa0a6] mt-0.5 tracking-wide text-[10px]">Sistemos slapyvardis</div>
+                  <div className="text-[#5f6368] dark:text-[#9aa0a6] mt-0.5 tracking-wide text-[10px]">Sistemos slapyvardis</div>
                 </div>
                 <div className="pt-6 border-t border-[#dadce0] dark:border-[#3c4043]">
                   <div className="flex items-baseline gap-2">
-                    <span className="text-[32px] font-light text-[#202124] dark:text-[#e8eaed] leading-none">{user?.emailsSent || 0}</span>
+                    <span className="text-[32px] font-light text-[#202124] dark:text-[#e8eaed] leading-none">{totalUserClientsCount}</span>
                   </div>
-                  <div className="text-[12px] text-[#5f6368] dark:text-[#9aa0a6] mt-1 tracking-wide text-[10px]">Išsiųsta laiškų</div>
+                  <div className="text-[#5f6368] dark:text-[#9aa0a6] mt-1 tracking-wide text-[10px]">Priskirti klientai</div>
                 </div>
                 <div className="pt-6 border-t border-[#dadce0] dark:border-[#3c4043]">
                   <div className="mb-2">
                     {user?.role === 'admin' ? (
-                      <div className="flex items-center gap-1 text-[9px] font-black uppercase tracking-tighter w-fit text-red-600 bg-red-100 dark:bg-red-900/30 dark:text-red-400 px-1.5 py-0.5 rounded border border-red-200 dark:border-red-800/40">
+                      <div className="flex items-center gap-1 text-[9px] font-black tracking-tighter w-fit text-red-600 bg-red-100 dark:bg-red-900/30 dark:text-red-400 px-1.5 py-0.5 rounded border border-red-200 dark:border-red-800/40">
                         <MdSecurity size={10} /> Administratorius
                       </div>
                     ) : (
-                      <div className="flex items-center gap-1 text-[9px] font-black w-fit uppercase tracking-tighter text-blue-600 bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-800/40">
+                      <div className="flex items-center gap-1 text-[9px] font-black w-fit tracking-tighter text-blue-600 bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 px-1.5 py-0.5 rounded border border-blue-200 dark:border-red-800/40">
                         <MdTrendingUp size={10} /> Marketingas
                       </div>
                     )}
                   </div>
-                  <div className="text-[12px] text-[#5f6368] dark:text-[#9aa0a6] tracking-wide text-[10px]">Prieigos lygis</div>
+                  <div className="text-[#5f6368] dark:text-[#9aa0a6] tracking-wide text-[10px]">Prieigos lygis</div>
                 </div>
               </div>
             </div>
 
-            <div className="md:col-span-2 bg-white dark:bg-[#292a2d] border border-[#dadce0] dark:border-[#3c4043] rounded shadow-sm flex flex-col min-h-[450px]">
-              <div className="p-4 border-b border-[#dadce0] dark:border-[#3c4043] flex items-center justify-between gap-4">
+            <div className="md:col-span-2 bg-white dark:bg-[#292a2d] border border-[#dadce0] dark:border-[#3c4043] rounded shadow-sm flex flex-col">
+              <div className="p-6 border-b border-[#dadce0] dark:border-[#3c4043] flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
-                    <MdList size={20} className="text-[#1a73e8]" />
+                    <MdList size={24} className="text-[#1a73e8]" />
                   </div>
-                  <h2 className="text-[14px] text-[#202124] dark:text-[#e8eaed] uppercase tracking-wider font-bold">Išsiųsti laiškai</h2>
+                  <h2 className="text-[16px] font-medium text-[#202124] dark:text-[#e8eaed]">Priskirti klientai</h2>
                 </div>
-                
-                <div className="relative w-48">
-                  <MdSearch className="absolute left-2.5 top-2.5 text-[#5f6368]" size={16} />
-                  <input type="text" placeholder="Ieškoti..." className={`${inputClass} pl-9 h-[32px] text-[12px]`} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                <div className="flex items-center gap-3">
+                  <div className="relative w-48">
+                    <MdSearch className="absolute left-2.5 top-2.5 text-[#5f6368]" size={16} />
+                    <input type="text" placeholder="Ieškoti..." className={`${inputClass} pl-9 h-[32px] text-[12px]`} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                  </div>
+                  <span className="text-[12px] bg-[#f1f3f4] dark:bg-[#3c4043] text-[#5f6368] dark:text-[#9aa0a6] px-2.5 py-0.5 rounded-full font-medium shrink-0">
+                    {totalUserClientsCount}
+                  </span>
                 </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto">
+              <div className="max-h-[380px] overflow-y-auto custom-scrollbar">
                 {userClients.length > 0 ? (
-                  <table className="w-full text-[13px]">
-                    <thead className="sticky top-0 bg-[#f8f9fa] dark:bg-[#202124] text-[#5f6368] dark:text-[#9aa0a6] text-[11px] uppercase tracking-wider border-b border-[#dadce0] dark:border-[#3c4043]">
-                      <tr>
-                        <th className="px-6 py-3 text-left">Vardas</th>
-                        <th className="px-6 py-3 text-left">Būsena</th>
+                  <table className="w-full text-[13px] text-[#202124] dark:text-[#e8eaed]">
+                    <thead>
+                      <tr className="bg-[#f8f9fa] dark:bg-[#202124] text-[13px] text-[#5f6368] dark:text-[#9aa0a6] tracking-wider border-b border-[#dadce0] dark:border-[#3c4043]">
+                        <th className="py-3 text-left pl-6 align-middle font-normal">
+                          <span className="inline-flex items-center gap-2">
+                            <MdPerson size={14} className="text-[#1a73e8]" /> Vardas
+                          </span>
+                        </th>
+                        <th className="py-3 text-left px-6 align-middle font-normal">
+                          <span className="inline-flex items-center gap-2">
+                            <MdBadge size={14} className="text-[#1a73e8]" /> Būsena
+                          </span>
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#f1f3f4] dark:divide-[#3c4043]">
                       {userClients.map(client => (
-                        <tr key={client._id} className="hover:bg-gray-50 dark:hover:bg-[#333333]/50 transition-colors">
-                          <td className="px-6 py-3.5 font-medium text-[#202124] dark:text-[#e8eaed]">{client.name}</td>
-                          <td className="px-6 py-3.5">
-                            <TagBadge tag={client.tag} />
+                        <tr key={client._id} className="transition-colors">
+                          <td className="pl-6 pr-4 py-3.5 font-medium text-left align-middle">
+                            <span className="truncate block">{client.name}</span>
+                          </td>
+                          <td className="px-6 py-3.5 text-left align-middle">
+                            <div className="flex justify-start">
+                              <TagBadge tag={client.tag} />
+                            </div>
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 ) : (
-                  <div className="flex-1 flex flex-col items-center justify-center text-[#5f6368] italic text-[13px] p-10 py-40">
+                  <div className="text-center text-[#5f6368] italic text-[13px] p-10 py-20">
                     Nėra rastų klientų.
                   </div>
                 )}
               </div>
             </div>
-
           </div>
         </div>
       </div>
@@ -141,20 +163,22 @@ export const ApiKeyManager = () => {
 
   useEffect(() => { fetchApiKeys(); }, []);
 
-  useEffect(() => {
-    if (status.msg) {
-      const timer = setTimeout(() => setStatus({ type: '', msg: '' }), 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [status]);
+  const handleCloseStatus = () => {
+    setStatus({ type: '', msg: '' });
+  };
+
+  const getUserClientCount = (ownerName) => {
+    if (!clients) return 0;
+    return clients.filter(c => c.marketer === ownerName).length;
+  };
 
   const renderRoleTag = (role) => {
     return role === 'admin' ? (
-      <div className="flex items-center gap-1 text-[9px] font-black uppercase tracking-tighter w-fit text-red-600 bg-red-100 dark:bg-red-900/30 dark:text-red-400 px-1.5 py-0.5 rounded border border-red-200 dark:border-red-800/40">
+      <div className="flex items-center justify-start gap-1 text-[9px] font-black tracking-tighter w-fit text-red-600 bg-red-100 dark:bg-red-900/30 dark:text-red-400 px-1.5 py-0.5 rounded border border-red-200 dark:border-red-800/40">
         <MdSecurity size={10} /> Administratorius
       </div>
     ) : (
-      <div className="flex items-center gap-1 text-[9px] font-black uppercase tracking-tighter w-fit text-blue-600 bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-800/40">
+      <div className="flex items-center justify-start gap-1 text-[9px] font-black tracking-tighter w-fit text-blue-600 bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 px-1.5 py-0.5 rounded border border-blue-200 dark:border-red-800/40">
         <MdTrendingUp size={10} /> Marketingas
       </div>
     );
@@ -162,20 +186,51 @@ export const ApiKeyManager = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.owner || !formData.key) return;
-    const result = await createApiKey(formData);
+    
+    const trimmedOwner = formData.owner.trim();
+    const trimmedKey = formData.key.trim();
+
+    setStatus({ type: '', msg: '' });
+
+    if (!trimmedOwner && !trimmedKey) {
+      setTimeout(() => setStatus({ type: 'error', msg: 'Prašome užpildyti visus laukus: įveskite savininką ir API raktą!' }), 10);
+      return;
+    }
+
+    if (!trimmedOwner) {
+      setTimeout(() => setStatus({ type: 'error', msg: 'Prašome įvesti rakto savininką / slapyvardį!' }), 10);
+      return;
+    }
+
+    if (!trimmedKey) {
+      setTimeout(() => setStatus({ type: 'error', msg: 'Prašome įvesti API raktą!' }), 10);
+      return;
+    }
+
+    if (trimmedKey.length < 5) {
+      setTimeout(() => setStatus({ type: 'error', msg: 'API raktas privalo būti ne trumpesnis nei 5 simboliai!' }), 10);
+      return;
+    }
+
+    const result = await createApiKey({
+      owner: trimmedOwner,
+      key: trimmedKey,
+      role: formData.role
+    });
+
     if (result) {
       setFormData({ owner: '', key: '', role: 'marketing' });
-      setStatus({ type: 'success', msg: 'Naujas prieigos raktas sėkmingai sukurtas!' });
+      setTimeout(() => setStatus({ type: 'success', msg: 'Naujas prieigos raktas sėkmingai sukurtas!' }), 10);
     } else {
-      setStatus({ type: 'error', msg: 'Nepavyko sukurti rakto.' });
+      setTimeout(() => setStatus({ type: 'error', msg: 'Nepavyko sukurti rakto.' }), 10);
     }
   };
 
   const confirmDelete = async () => {
+    setStatus({ type: '', msg: '' });
     const success = await deleteApiKey(deleteModal.id);
     if (success) {
-      setStatus({ type: 'success', msg: `Prieigos raktas (${deleteModal.owner}) panaikintas!` });
+      setTimeout(() => setStatus({ type: 'success', msg: `Prieigos raktas (${deleteModal.owner}) panaikintas!` }), 10);
     }
     setDeleteModal({ isOpen: false, id: null, owner: '' });
   };
@@ -186,56 +241,40 @@ export const ApiKeyManager = () => {
     <div className="flex-1 flex flex-col overflow-hidden bg-[#f8f9fa] dark:bg-[#1e1e1e]">
       <ApiKeyHeader />
 
-      <ApiKeyProfileModal 
-        user={selectedUser} 
-        clients={clients}
-        onClose={() => setSelectedUser(null)} 
-      />
+      <ApiKeyProfileModal user={selectedUser} clients={clients} onClose={() => setSelectedUser(null)} />
 
-      <ConfirmModal 
-        isOpen={deleteModal.isOpen}
-        title="Panaikinti prieigą?"
-        message={`Ar tikrai norite ištrinti ${deleteModal.owner} raktą? Vartotojas tuoj pat praras prieigą prie sistemos.`}
-        onConfirm={confirmDelete}
-        onCancel={() => setDeleteModal({ isOpen: false, id: null, owner: '' })}
-      />
+      <ConfirmModal isOpen={deleteModal.isOpen} title="Panaikinti prieigą?" message={`Ar tikrai norite ištrinti ${deleteModal.owner} raktą? Vartotojas tuoj pat praras prieigą prie sistemos.`} onConfirm={confirmDelete} onCancel={() => setDeleteModal({ isOpen: false, id: null, owner: '' })} />
 
       <main className="flex-1 overflow-y-auto p-6">
         <div className="max-w-5xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
           <div className="bg-white dark:bg-[#292a2d] border border-[#dadce0] dark:border-[#3c4043] rounded shadow-sm overflow-hidden">
-            <div className="p-4 border-b border-[#dadce0] dark:border-[#3c4043] flex items-center gap-3">
-              <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
-                <MdVpnKey size={20} className="text-[#1a73e8]" />
+            <div className="p-6 border-b border-[#dadce0] dark:border-[#3c4043] flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
+                  <MdVpnKey size={24} className="text-[#1a73e8]" />
+                </div>
+                <h2 className="text-[16px] font-medium text-[#202124] dark:text-[#e8eaed]">Generuoti naują prieigą</h2>
               </div>
-              <h2 className="text-[14px] text-[#202124] dark:text-[#e8eaed] uppercase tracking-wider font-bold">Generuoti naują prieigą</h2>
             </div>
             
             <form onSubmit={handleSubmit} className="p-6 grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
               <div className="space-y-1.5">
-                <label className="flex items-center gap-2 text-[11px] text-[#5f6368] dark:text-[#9aa0a6] uppercase tracking-wider">
+                <label className="flex items-center gap-2 text-[11px] text-[#5f6368] dark:text-[#9aa0a6] tracking-wider">
                   <MdPerson size={14} className="text-[#1a73e8]" /> Savininkas
                 </label>
-                <input type="text" placeholder="Vardas / Slapyvardis" className={inputClass} value={formData.owner} onChange={e => setFormData({...formData, owner: e.target.value})} />
+                <input type="text" placeholder="Vardas / Slapyvardis" className={`${inputClass} h-[38px]`} value={formData.owner} onChange={e => setFormData({...formData, owner: e.target.value})} />
               </div>
               <div className="space-y-1.5">
-                <label className="flex items-center gap-2 text-[11px] text-[#5f6368] dark:text-[#9aa0a6] uppercase tracking-wider">
+                <label className="flex items-center gap-2 text-[11px] text-[#5f6368] dark:text-[#9aa0a6] tracking-wider">
                   <MdShield size={14} className="text-[#1a73e8]" /> API Raktas
                 </label>
-                <input type="text" placeholder="Slaptas raktas" className={`${inputClass} text-[12px]`} value={formData.key} onChange={e => setFormData({...formData, key: e.target.value})} />
+                <input type="text" placeholder="Slaptas raktas (min. 5 sim.)" className={`${inputClass} h-[38px] text-[12px]`} value={formData.key} onChange={e => setFormData({...formData, key: e.target.value})} />
               </div>
               <div className="space-y-1.5">
-                <label className="flex items-center gap-2 text-[11px] text-[#5f6368] dark:text-[#9aa0a6] uppercase tracking-wider">
+                <label className="flex items-center gap-2 text-[11px] text-[#5f6368] dark:text-[#9aa0a6] tracking-wider">
                     <MdBadge size={14} className="text-[#1a73e8]" /> Rolė
                 </label>
-                <select 
-                  className={`${inputClass} font-bold ${
-                    formData.role === 'admin' 
-                      ? 'text-red-600 dark:text-red-400' 
-                      : 'text-blue-600 dark:text-blue-400'
-                  }`} 
-                  value={formData.role} 
-                  onChange={e => setFormData({...formData, role: e.target.value})}
-                >
+                <select className={`${inputClass} h-[38px] font-bold ${formData.role === 'admin' ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'}`} value={formData.role} onChange={e => setFormData({...formData, role: e.target.value})}>
                   <option value="marketing" className="text-blue-600 dark:text-blue-400 font-bold">Marketingas</option>
                   <option value="admin" className="text-red-600 dark:text-red-400 font-bold">Administratorius</option>
                 </select>
@@ -247,58 +286,88 @@ export const ApiKeyManager = () => {
           </div>
 
           <div className="bg-white dark:bg-[#292a2d] border border-[#dadce0] dark:border-[#3c4043] rounded shadow-sm overflow-hidden">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-[#f8f9fa] dark:bg-[#202124] text-[11px] text-[#5f6368] dark:text-[#9aa0a6] uppercase tracking-wider border-b border-[#dadce0] dark:border-[#3c4043]">
-                  <th className="px-6 py-4">Savininkas</th>
-                  <th className="px-6 py-4">Raktas</th>
-                  <th className="px-6 py-4 text-center">Aktyvumas</th>
-                  <th className="px-6 py-4">Rolė</th>
-                  <th className="px-6 py-4 text-right">Veiksmai</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#dadce0] dark:divide-[#3c4043]">
-                {apiKeys.map(k => (
-                  <tr key={k._id} className="transition-colors group text-[13px]">
-                    <td className="px-6 py-4 text-[#1a73e8] cursor-pointer hover:underline" onClick={() => setSelectedUser(k)}>
-                      <div className="flex items-center gap-2">
-                        <MdInfoOutline className="text-blue-600 dark:text-blue-400" size={16} />
-                        {k.owner}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-[12px]">
-                      <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 rounded">{k.key}</span>
-                        <MdContentCopy size={14} className="opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity" onClick={() => { navigator.clipboard.writeText(k.key); setStatus({ type: 'success', msg: 'Raktas nukopijuotas!' }); }} />
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-center font-medium">
-                      <span className="text-gray-500 dark:text-gray-400">{k.emailsSent || 0}</span>
-                      <span className="text-[10px] text-gray-400 ml-1">laiškai</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      {renderRoleTag(k.role)}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      {k.role === 'admin' ? (
-                        <div className="inline-flex p-1.5 text-gray-300 dark:text-gray-600 cursor-not-allowed" title="Administratoriaus ištrinti negalima">
-                          <MdBlock size={18} />
-                        </div>
-                      ) : (
-                        <button onClick={() => setDeleteModal({ isOpen: true, id: k._id, owner: k.owner })} className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors">
-                          <MdDelete size={18} />
-                        </button>
-                      )}
-                    </td>
+            <div className="p-6 border-b border-[#dadce0] dark:border-[#3c4043] flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
+                  <MdList size={24} className="text-[#1a73e8]" />
+                </div>
+                <h2 className="text-[16px] font-medium text-[#202124] dark:text-[#e8eaed]">Prieigos raktų sąrašas</h2>
+              </div>
+              <span className="text-[12px] bg-[#f1f3f4] dark:bg-[#3c4043] text-[#5f6368] dark:text-[#9aa0a6] px-2.5 py-0.5 rounded-full font-medium">
+                {apiKeys.length}
+              </span>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-[13px] text-[#202124] dark:text-[#e8eaed]">
+                <thead>
+                  <tr className="bg-[#f8f9fa] dark:bg-[#202124] text-[13px] text-[#5f6368] dark:text-[#9aa0a6] tracking-wider border-b border-[#dadce0] dark:border-[#3c4043]">
+                    <th className="py-3 px-6 font-normal text-left align-middle">
+                      <span className="inline-flex items-center gap-2 justify-start text-[13px] text-[#5f6368] dark:text-[#9aa0a6] tracking-wider">
+                        <MdPerson size={14} className="text-[#1a73e8]" /> Savininkas
+                      </span>
+                    </th>
+                    <th className="py-3 px-6 font-normal text-left align-middle">
+                      <span className="inline-flex items-center gap-2 justify-start text-[13px] text-[#5f6368] dark:text-[#9aa0a6] tracking-wider">
+                        <MdBadge size={14} className="text-[#1a73e8]" /> Rolė
+                      </span>
+                    </th>
+                    <th className="py-3 px-6 font-normal text-left align-middle">
+                      <span className="inline-flex items-center gap-2 justify-start text-[13px] text-[#5f6368] dark:text-[#9aa0a6] tracking-wider">
+                        <MdPeople size={14} className="text-[#1a73e8]" /> Priskirti klientai
+                      </span>
+                    </th>
+                    <th className="py-3 px-6 font-normal text-left align-middle">
+                      <span className="inline-flex items-center gap-2 justify-start text-[13px] text-[#5f6368] dark:text-[#9aa0a6] tracking-wider">
+                        <MdShield size={14} className="text-[#1a73e8]" /> Prieigos Raktas
+                      </span>
+                    </th>
+                    <th className="py-3 px-6 font-normal text-right w-24 align-middle">
+                      <span className="inline-flex items-center gap-2 justify-end text-[13px] text-[#5f6368] dark:text-[#9aa0a6] tracking-wider">
+                        <MdBolt size={14} className="text-[#1a73e8]" /> Veiksmai
+                      </span>
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-[#f1f3f4] dark:divide-[#3c4043]">
+                  {apiKeys.map((item) => (
+                    <tr key={item._id} onClick={() => setSelectedUser(item)} className="group hover:bg-[#f8f9fa] dark:hover:bg-[#3c4043]/30 transition-colors cursor-pointer">
+                      <td className="py-3 px-6 font-medium text-left align-middle">
+                        <span className="truncate block max-w-[180px]">{item.owner}</span>
+                      </td>
+                      <td className="py-3 px-6 text-left align-middle">{renderRoleTag(item.role)}</td>
+                      <td className="py-3 px-6 font-bold text-slate-500 dark:text-slate-400 text-left align-middle">
+                        {getUserClientCount(item.owner)}
+                      </td>
+                      <td className="py-3 px-6 font-mono text-[12px] text-slate-400 dark:text-slate-500 max-w-[140px] text-left align-middle relative">
+                        <span className="group-hover:hidden tracking-widest block">••••••••</span>
+                        <span className="hidden group-hover:block truncate">{item.key}</span>
+                      </td>
+                      <td className="py-3 px-6 text-right align-middle">
+                        <div className="flex justify-end">
+                          {item.role === 'admin' ? (
+                            <div className="p-1.5 text-slate-300 dark:text-slate-600 cursor-not-allowed pointer-events-none inline-flex items-center justify-center">
+                              <MdBlock size={16} />
+                            </div>
+                          ) : (
+                            <button onClick={(e) => { e.stopPropagation(); setDeleteModal({ isOpen: true, id: item._id, owner: item.owner }); }} className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-[#1a73e8] hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-all opacity-0 group-hover:opacity-100 inline-flex items-center justify-center">
+                              <MdDelete size={16} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-          <StatusMessage msg={status.msg} type={status.type} />
-          
         </div>
       </main>
+
+      {status.msg && <StatusMessage type={status.type} msg={status.msg} onClose={handleCloseStatus} />}
     </div>
   );
 };
+
+export default ApiKeyManager;

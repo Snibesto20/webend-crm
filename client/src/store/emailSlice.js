@@ -8,6 +8,7 @@ export const createEmailSlice = (set, get) => ({
     const payload = {
       to: to,
       name: name,
+      clientId: clientData.id || null,
       context: clientData.context || 'Siunčiant laišką'
     };
 

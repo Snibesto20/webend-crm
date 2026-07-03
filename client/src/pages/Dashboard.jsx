@@ -12,13 +12,7 @@ export const Dashboard = () => {
       <DashboardHeader />
       <div className="flex-1 flex overflow-hidden p-6 gap-6">
         <aside className="w-[280px] shrink-0 hidden md:block border border-[#dadce0] dark:border-[#3c4043] bg-white dark:bg-[#202124] rounded shadow-sm overflow-hidden">
-          {user?.role === 'admin' ? (
-            <ClientForm />
-          ) : (
-            <div className="p-6 text-sm text-slate-500 italic dark:text-slate-400">
-              Tik administratoriai gali pridėti naujus klientus.
-            </div>
-          )}
+          <ClientForm />
         </aside>
         <main className="flex-1 min-w-0 overflow-y-auto custom-scrollbar">
           <CardList />

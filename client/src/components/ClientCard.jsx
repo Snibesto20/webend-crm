@@ -10,7 +10,9 @@ import {
   MdEuro, 
   MdMiscellaneousServices, 
   MdNotes,
-  MdPerson 
+  MdPerson,
+  MdContactMail,
+  MdAdd
 } from 'react-icons/md';
 
 const ALL_TAGS = [
@@ -21,13 +23,39 @@ const ALL_TAGS = [
 
 export const ClientCard = ({ client }) => {
   const { updateClient, deleteClient } = useStore();
+  const user = useStore((state) => state.user);
   const [isEditing, setIsEditing] = useState(false);
-  const [editData, setEditData] = useState({ ...client });
+  const [editData, setEditData] = useState({ ...client, contacts: client.contacts || [''] });
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
+  const isAdmin = user?.role === 'admin';
+
   const handleSave = async () => {
-    await updateClient(client.id, editData);
+    if (!isAdmin) return;
+    const filteredContacts = (editData.contacts || [])
+      .map(c => c.trim())
+      .filter(c => c !== '');
+    
+    await updateClient(client.id, {
+      ...editData,
+      contacts: filteredContacts.length ? filteredContacts : []
+    });
     setIsEditing(false);
+  };
+
+  const handleContactChange = (index, value) => {
+    const newContacts = [...(editData.contacts || [])];
+    newContacts[index] = value;
+    setEditData({ ...editData, contacts: newContacts });
+  };
+
+  const addContactField = () => {
+    setEditData({ ...editData, contacts: [...(editData.contacts || []), ''] });
+  };
+
+  const removeContactField = (index) => {
+    const newContacts = (editData.contacts || []).filter((_, i) => i !== index);
+    setEditData({ ...editData, contacts: newContacts.length ? newContacts : [''] });
   };
 
   const isDisapproved = client.tag === 'disapproved';
@@ -44,14 +72,12 @@ export const ClientCard = ({ client }) => {
   const isCurrentlyGhosted = editData.tag === 'disapproved' || editData.tag === 'pending';
 
   const inputClass = "w-full px-2 py-1.5 text-[13px] rounded border border-[#dadce0] dark:border-[#5f6368] bg-white dark:bg-[#202124] text-[#202124] dark:text-[#e8eaed] focus:border-[#1a73e8] focus:outline-none mb-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 dark:disabled:bg-gray-800";
+  const labelClass = "block text-[11px] font-medium text-slate-500 mb-1";
+  const blueButtonClass = "p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors";
 
   return (
     <>
-      <div className={`relative bg-white dark:bg-[#292a2d] rounded border transition-all duration-300 p-4 shadow-sm group ${
-        isGhosted 
-          ? "border-slate-200 dark:border-slate-800 opacity-60 bg-slate-50/50 dark:bg-slate-900/10" 
-          : "border-[#dadce0] dark:border-[#3c4043]"
-      }`}>
+      <div className={`relative bg-white dark:bg-[#292a2d] rounded border transition-all duration-300 p-4 shadow-sm group ${isGhosted ? "border-slate-200 dark:border-slate-800 opacity-60 bg-slate-50/50 dark:bg-slate-900/10" : "border-[#dadce0] dark:border-[#3c4043]"}`}>
         {useAbsoluteMarketer && !isEditing && (
           <div className="absolute bottom-2 right-2 flex items-center gap-1 text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-800/50 px-1.5 py-0.5 rounded opacity-70">
             <MdPerson size={10} />
@@ -59,37 +85,69 @@ export const ClientCard = ({ client }) => {
           </div>
         )}
 
-        {isEditing ? (
+        {isEditing && isAdmin ? (
           <div className="animate-in fade-in duration-300">
-            <input className={inputClass} placeholder="Įmonės pavadinimas" value={editData.name} onChange={(e) => setEditData({...editData, name: e.target.value})} disabled={isCurrentlyGhosted} />
-            <input className={inputClass} placeholder="Reikiama paslauga" value={editData.serviceNeeded || ''} onChange={(e) => setEditData({...editData, serviceNeeded: e.target.value})} disabled={isCurrentlyGhosted} />
-            
-            <select className={`${inputClass} capitalize font-medium ${getOptionColorClass(editData.tag)}`} value={editData.tag} onChange={(e) => setEditData({...editData, tag: e.target.value})}>
-              {ALL_TAGS.map(t => (
-                <option key={t} value={t} className={getOptionColorClass(t)}>{translateTag(t)}</option>
-              ))}
-            </select>
+            <div>
+              <label className={labelClass}>Įmonės pavadinimas</label>
+              <input className={inputClass} placeholder="Įmonės pavadinimas" value={editData.name} onChange={(e) => setEditData({...editData, name: e.target.value})} disabled={isCurrentlyGhosted} />
+            </div>
+
+            <div>
+              <label className={labelClass}>Kontaktai (El. paštas / Tel. nr.)</label>
+              <div className="space-y-1.5 mb-2">
+                {(editData.contacts || []).map((contact, index) => (
+                  <div key={index} className="flex gap-1.5 items-center">
+                    <div className="relative flex-1">
+                      <MdContactMail className="absolute left-2 top-2.5 text-slate-400" size={14} />
+                      <input type="text" className={`${inputClass} pl-7 mb-0 py-1`} placeholder="El. paštas / Tel. nr." value={contact} onChange={(e) => handleContactChange(index, e.target.value)} />
+                    </div>
+                    {editData.contacts.length > 1 && (
+                      <button type="button" onClick={() => removeContactField(index)} className={blueButtonClass}>
+                        <MdDelete size={16} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button type="button" onClick={addContactField} className="flex items-center gap-0.5 text-[11px] text-[#1a73e8] hover:underline pt-0.5 font-medium">
+                  <MdAdd size={14} /> Pridėti kontaktą
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className={labelClass}>Kliento statusas</label>
+              <select className={`${inputClass} capitalize font-medium ${getOptionColorClass(editData.tag)}`} value={editData.tag} onChange={(e) => setEditData({...editData, tag: e.target.value})}>
+                {ALL_TAGS.map(t => (
+                  <option key={t} value={t} className={getOptionColorClass(t)}>{translateTag(t)}</option>
+                ))}
+              </select>
+            </div>
             
             {showMoney && (
-              <div className="relative mb-2">
-                <MdEuro className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
-                <input type="number" className={`${inputClass} pl-7 mb-0`} placeholder="Uždirbta suma" value={editData.moneyMade || 0} onChange={(e) => setEditData({...editData, moneyMade: parseFloat(e.target.value) || 0})} disabled={isCurrentlyGhosted} />
+              <div>
+                <label className={labelClass}>Uždirbta suma</label>
+                <div className="relative mb-2">
+                  <MdEuro className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
+                  <input type="number" className={`${inputClass} pl-7 mb-0`} placeholder="Uždirbta suma" value={editData.moneyMade || 0} onChange={(e) => setEditData({...editData, moneyMade: parseFloat(e.target.value) || 0})} disabled={isCurrentlyGhosted} />
+                </div>
               </div>
             )}
 
-            <textarea className={`${inputClass} resize-none mb-0`} rows="2" placeholder="Pastabos..." value={editData.notes} onChange={(e) => setEditData({...editData, notes: e.target.value})} disabled={isCurrentlyGhosted} />
+            <div>
+              <label className={labelClass}>Reikiama paslauga</label>
+              <input className={inputClass} placeholder="Reikiama paslauga" value={editData.serviceNeeded || ''} onChange={(e) => setEditData({...editData, serviceNeeded: e.target.value})} disabled={isCurrentlyGhosted} />
+            </div>
+
+            <div>
+              <label className={labelClass}>Užrašai</label>
+              <textarea className={`${inputClass} resize-none mb-0`} rows="2" placeholder="Pastabos..." value={editData.notes} onChange={(e) => setEditData({...editData, notes: e.target.value})} disabled={isCurrentlyGhosted} />
+            </div>
 
             <div className="flex gap-2 justify-end mt-3">
-              <button 
-                onClick={() => { setIsEditing(false); setEditData({...client}); }} 
-                className="p-1.5 rounded text-[#5f6368] dark:text-[#9aa0a6] hover:bg-[#f1f3f4] dark:hover:bg-[#3c4043] transition-colors"
-              >
+              <button onClick={() => { setIsEditing(false); setEditData({...client, contacts: client.contacts || ['']}); }} className="p-1.5 rounded text-[#5f6368] dark:text-[#9aa0a6] hover:bg-[#f1f3f4] dark:hover:bg-[#3c4043] transition-colors">
                 <MdClose size={16} />
               </button>
-              <button 
-                onClick={handleSave} 
-                className="p-1.5 rounded text-white bg-[#1a73e8] hover:bg-[#1557b0] transition-colors shadow-sm"
-              >
+              <button onClick={handleSave} className="p-1.5 rounded text-white bg-[#1a73e8] hover:bg-[#1557b0] transition-colors shadow-sm">
                 <MdCheck size={16} />
               </button>
             </div>
@@ -111,14 +169,16 @@ export const ClientCard = ({ client }) => {
                 <TagBadge tag={client.tag} />
               </div>
               
-              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                <button onClick={() => setIsEditing(true)} className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors">
-                  <MdEdit size={16} />
-                </button>
-                <button onClick={() => setIsDeleteModalOpen(true)} className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors">
-                  <MdDelete size={16} />
-                </button>
-              </div>
+              {isAdmin && (
+                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                  <button onClick={() => setIsEditing(true)} className={blueButtonClass}>
+                    <MdEdit size={16} />
+                  </button>
+                  <button onClick={() => setIsDeleteModalOpen(true)} className={blueButtonClass}>
+                    <MdDelete size={16} />
+                  </button>
+                </div>
+              )}
             </div>
 
             {!hideBody && (
@@ -137,6 +197,19 @@ export const ClientCard = ({ client }) => {
                     </div>
                   )}
                 </div>
+
+                {client.contacts && client.contacts.length > 0 ? (
+                  <div className="flex flex-wrap gap-1 mt-2 min-h-[24px]">
+                    {client.contacts.map((contact, idx) => (
+                      <div key={idx} className="flex items-center gap-1.5 px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded border border-blue-100 dark:border-blue-800/30 text-[11px]">
+                        <MdContactMail size={12} className="shrink-0" />
+                        <span className="truncate max-w-[150px]">{contact}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="mt-2 h-[24px]" />
+                )}
 
                 <div className="flex items-start gap-2 px-3 py-0.5 bg-slate-50 dark:bg-slate-900/40 rounded border border-slate-200 dark:border-slate-800 overflow-hidden transition-all duration-50 max-h-[26px] group-hover:max-h-[500px]">
                   <MdNotes className="mt-0.5 text-slate-400 shrink-0" size={14} />
@@ -160,3 +233,5 @@ export const ClientCard = ({ client }) => {
     </>
   );
 };
+
+export default ClientCard;

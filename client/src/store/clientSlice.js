@@ -16,7 +16,6 @@ export const createClientSlice = (set, get) => ({
 
   addClient: async (clientData) => {
     try {
-      // Automatiškai pridedame marketerį iš prisijungusio vartotojo objekto
       const currentUser = get().user;
       const dataWithMarketer = {
         ...clientData,
@@ -26,7 +25,7 @@ export const createClientSlice = (set, get) => ({
       const res = await fetch(`${import.meta.env.VITE_API_URL}/api/clients`, { 
         method: 'POST', 
         headers: get().getAuthHeaders(), 
-        body: JSON.stringify(dataWithMarketer) // Siunčiame papildytus duomenis
+        body: JSON.stringify(dataWithMarketer)
       });
       
       if (!res.ok) throw new Error('Nepavyko pridėti kliento');

@@ -19,9 +19,6 @@ router.put('/me/update-key', auth(), async (req, res) => {
   try {
     const { newKey } = req.body;
     if (!newKey || newKey.length < 5) return res.status(400).json({ error: "Per trumpas raktas." });
-    
-    const existing = await ApiKey.findOne({ key: newKey });
-    if (existing) return res.status(400).json({ error: "Raktas užimtas." });
 
     req.user.key = newKey;
     await req.user.save();

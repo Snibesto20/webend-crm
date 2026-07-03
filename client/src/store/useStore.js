@@ -1,4 +1,3 @@
-// src/store/useStore.js
 import { create } from 'zustand'
 import { createAuthSlice } from './authSlice'
 import { createUISlice } from './uiSlice'

@@ -1,5 +1,5 @@
 export const createAuthSlice = (set, get) => ({
-  user: null, // Čia saugosime visą ApiKey dokumentą
+  user: null,
   apiKey: localStorage.getItem('crm-api-key') || null,
   isAuthenticated: !!localStorage.getItem('crm-api-key'),
   isLoading: true,
@@ -19,7 +19,6 @@ export const createAuthSlice = (set, get) => ({
       });
       if (res.ok) {
         const data = await res.json();
-        // Saugome visą user objektą (kuris apima role, owner, emailsSent ir kt.)
         set({ user: data, isAuthenticated: true, isLoading: false });
       } else { 
         get().logout(); 
@@ -39,9 +38,6 @@ export const createAuthSlice = (set, get) => ({
       if (!res.ok) return false;
       const data = await res.json();
       
-      console.log("pasifetchinom: ", `${import.meta.env.VITE_API_URL}/api/login`);
-      
-
       set({ 
         user: data.user, 
         apiKey: data.apiKey, 
@@ -71,15 +67,18 @@ export const createAuthSlice = (set, get) => ({
         headers: get().getAuthHeaders(), 
         body: JSON.stringify({ newKey }) 
       });
+
       if (res.ok) { 
         set({ apiKey: newKey }); 
         localStorage.setItem('crm-api-key', newKey); 
-        // Po rakto atnaujinimo iškart atnaujiname user duomenis
-        get().verifyAuth();
+        
         return { success: true }; 
       }
+      
       const data = await res.json();
       return { success: false, error: data.error };
-    } catch (err) { return { success: false, error: "Tinklo klaida" }; }
+    } catch (err) { 
+      return { success: false, error: "Tinklo klaida" }; 
+    }
   }
 });

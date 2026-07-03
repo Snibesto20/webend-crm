@@ -36,13 +36,9 @@ function App() {
     verifyAuth();
   }, []);
 
-  // Centralizuotas duomenų krovimas priklausantis nuo autentifikacijos ir rolės
   useEffect(() => {
     if (isAuthenticated && user) {
-      // Kliantai reikalingi visiems
       fetchClients();
-      
-      // Admin specifiniai duomenys
       if (user.role === 'admin') {
         fetchUsers();
         fetchApiKeys();
@@ -69,12 +65,12 @@ function App() {
             <Route path="/login" element={
               !isAuthenticated 
                 ? <Login /> 
-                : <Navigate to={user?.role === 'marketing' ? "/email" : "/"} />
+                : <Navigate to="/" />
             } />
             
             <Route path="/" element={
               <PrivateRoute>
-                {user?.role === 'marketing' ? <Navigate to="/email" /> : <Dashboard />}
+                <Dashboard />
               </PrivateRoute>
             } />
 
@@ -103,7 +99,7 @@ function App() {
             } />
 
             <Route path="*" element={
-              <Navigate to={user?.role === 'marketing' ? "/email" : "/"} />
+              <Navigate to="/" />
             } />
           </Routes>
         </main>

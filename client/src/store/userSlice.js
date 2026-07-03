@@ -6,7 +6,6 @@ export const createUserSlice = (set, get) => ({
   fetchUsers: async () => {
     set({ isUsersLoading: true, usersError: null });
     try {
-      // Svarbu naudoti get().getAuthHeaders(), nes serveriui reikia autorizacijos
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users`, {
         headers: get().getAuthHeaders()
       });
@@ -24,7 +23,7 @@ export const createUserSlice = (set, get) => ({
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/${id}`, { 
         method: 'DELETE',
-        headers: get().getAuthHeaders() // Saugumo patikrinimas
+        headers: get().getAuthHeaders()
       });
       
       if (!response.ok) throw new Error('Nepavyko pašalinti');

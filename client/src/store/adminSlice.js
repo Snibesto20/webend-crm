@@ -9,9 +9,16 @@ export const createAdminSlice = (set, get) => ({
   createApiKey: async (keyData) => {
     try {
       const res = await fetch(`${import.meta.env.VITE_API_URL}/api/keys`, { method: 'POST', headers: get().getAuthHeaders(), body: JSON.stringify(keyData) });
-      if (res.ok) { const newKey = await res.json(); set(state => ({ apiKeys: [...state.apiKeys, newKey] })); return true; }
-      return false;
-    } catch (err) { return false; }
+      const data = await res.json();
+      
+      if (res.ok) { 
+        set(state => ({ apiKeys: [...state.apiKeys, data] })); 
+        return { success: true }; 
+      }
+      return { success: false, error: data.error || 'Nepavyko sukurti rakto.' };
+    } catch (err) { 
+      return { success: false, error: 'Tinklo klaida. Bandykite vėliau.' }; 
+    }
   },
   deleteApiKey: async (id) => {
     try {

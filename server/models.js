@@ -17,7 +17,8 @@ const ClientSchema = new mongoose.Schema({
   serviceNeeded: { type: String, default: '' },
   notes: { type: String, default: '' },
   moneyMade: { type: Number, default: 0 },
-  marketer: { type: String, default: '' }
+  marketer: { type: String, default: '' },
+  contacts: { type: [String], default: [] }
 }, { timestamps: true });
 
 ClientSchema.set('toJSON', {

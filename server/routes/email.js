@@ -1,7 +1,7 @@
 import express from 'express';
 import nodemailer from 'nodemailer';
 import { auth } from '../middleware.js';
-import { ApiKey } from '../models.js';
+import { ApiKey, Client } from '../models.js';
 
 const router = express.Router();
 
@@ -11,11 +11,12 @@ const transporter = nodemailer.createTransport({
 });
 
 router.post('/', auth(['admin', 'marketing']), async (req, res) => {
-  const { to } = req.body;
+  const { to, name } = req.body;
 
   if (!to) return res.status(400).json({ error: "Nenurodytas gavėjas." });
+  
+  const normalizedName = (name || '').trim().toUpperCase();
 
-  console.log("aaaaaaaa")
   const emailContent = `Sveiki,
 
 Pastebėjome, kad jūsų verslas šiuo metu neturi internetinės svetainės.
@@ -26,7 +27,7 @@ Esame Webend komanda – kuriame modernias, greitas ir profesionaliai atrodanči
 
 Ką galime sukurti jūsų verslui:
 • Tvarkingą ir pasitikėjimą kuriantį dizainą
-• Greitai veikiančią svetainę, patogią telefonuose ir kompiuteriuose
+• Greitai veikiančią svetainę, pritaikytą telefonams ir kompiuteriams
 • Aiškią struktūrą, kuri skatina klientus susisiekti
 • Sprendimus, kad jus būtų lengviau rasti Google paieškoje
 
@@ -34,7 +35,7 @@ Svarbiausia – šiuo metu svetaines kuriame visiškai nemokamai.
 Tai darome tam, kad kauptume patirtį ir pildytume savo darbų portfolio.
 Taip pat padovanojame talpinimą, todėl nereikės mokėti jokių mėnesinių mokesčių.
 
-Dirbame kruopščiai, skiriame dėmesį detalėms ir siekiame, kad jūsų verslas atrodytų profesionaliai. Mūsų darbus galite pamatyti čia: webend-lt.web.app
+Mūsų darbus galite pamatyti čia: webend-lt.web.app
 
 Jeigu norėsite, galime nemokamai parodyti, kaip galėtų atrodyti jūsų svetainė.
 Ar būtų įdomu pamatyti?`;
@@ -53,7 +54,33 @@ Ar būtų įdomu pamatyti?`;
       $inc: { emailsSent: 1 },
     });
 
-    res.json({ message: "Išsiųsta!" });
+    if (normalizedName) {
+      try {
+        const existingClient = await Client.findOne({ name: normalizedName });
+        
+        if (!existingClient) {
+          await Client.create({
+            name: normalizedName,
+            contacts: [to.trim()],
+            tag: 'pending',
+            serviceNeeded: '-',
+            notes: '',
+            moneyMade: 0,
+            marketer: req.user.username || 'Nenurodytas'
+          });
+        } else {
+          if (!existingClient.contacts.includes(to.trim())) {
+            await Client.findByIdAndUpdate(existingClient._id, {
+              $push: { contacts: to.trim() }
+            });
+          }
+        }
+      } catch (dbErr) {
+        console.error('Klaida sinchronizuojant klientą fone:', dbErr.message);
+      }
+    }
+
+    res.json({ success: true, message: "Išsiųsta!" });
   } catch (err) {
     console.error('Email error:', err.message);
     res.status(500).json({ error: "Sistemos klaida siunčiant laišką." });

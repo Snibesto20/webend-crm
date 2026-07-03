@@ -13,10 +13,16 @@ router.get('/', auth(['admin']), async (req, res) => {
 
 router.post('/', auth(['admin']), async (req, res) => {
   try {
-    const newKey = new ApiKey(req.body);
+    const { owner, key, role } = req.body;
+
+    if (!key || key.trim().length < 5) {
+      return res.status(400).json({ error: "API raktas privalo būti ne trumpesnis nei 5 simboliai." });
+    }
+
+    const newKey = new ApiKey({ owner, key: key.trim(), role });
     await newKey.save();
     res.status(201).json(newKey);
-  } catch (err) { res.status(400).json({ error: "Raktas jau yra." }); }
+  } catch (err) { res.status(400).json({ error: "Raktas jau yra sistemoje." }); }
 });
 
 router.delete('/:id', auth(['admin']), async (req, res) => {
