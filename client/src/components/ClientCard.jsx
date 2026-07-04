@@ -19,22 +19,37 @@ import {
   MdBadge
 } from 'react-icons/md';
 
-// Tiksli išplėstinė žymių seka: potencialas 1-10, patvirtinta (laukia), aktyvus klientas, archyvuotas klientas, atmesta, neapdorota
 const ALL_TAGS = [
   'potential 1', 'potential 2', 'potential 3', 'potential 4', 'potential 5', 
   'potential 6', 'potential 7', 'potential 8', 'potential 9', 'potential 10', 
-  'pending', 'approved', 'Active Client', 'Archived Client', 'disapproved', 'unprocessed'
+  'pending', 'approved', 'active client', 'archived client', 'disapproved', 'unprocessed'
 ];
 
-// Pagalbinė funkcija telefono numerio formatavimui išvalyti
 const formatPhoneNumber = (contactStr) => {
-  let cleaned = contactStr.replace(/\D/g, '');
-  if (!cleaned) return '';
+  const trimmed = contactStr.trim();
+  if (!trimmed) return '';
+
+  console.log("=== formatPhoneNumber paleistas ===");
+  console.log("Gauta reikšmė:", trimmed);
+
+  const hasLetters = /[a-zA-ZąčęėįšųūžĄČĘĖĮŠŲŪŽ]/i.test(trimmed);
+  
+  if (hasLetters) {
+    console.log("-> Rasta raidžių. Tai el. paštas arba nuoroda. Paliekame nepakeistą.");
+    return trimmed;
+  }
+
+  console.log("-> Raidžių nerasta. Apdorojame kaip telefono numerį...");
+  let cleaned = trimmed.replace(/\D/g, '');
+  if (!cleaned) return trimmed;
+
   if (cleaned.startsWith('370')) {
     cleaned = '0' + cleaned.substring(3);
   } else if (cleaned.startsWith('8')) {
     cleaned = '0' + cleaned.substring(1);
   }
+  
+  console.log("-> Suformatuotas telefonas:", cleaned);
   return cleaned;
 };
 
@@ -56,11 +71,9 @@ export const ClientCard = ({ client, onDeleteSuccess }) => {
     setStatus({ type: '', msg: '' });
     setIsSubmitting(true);
 
-    // Filtruojame tuščius ir automatiškai išvalome kontaktų telefono numerius
     const filteredContacts = (editData.contacts || [])
-      .map(c => c.trim())
-      .filter(c => c !== '')
-      .map(c => formatPhoneNumber(c));
+      .map(c => formatPhoneNumber(c))
+      .filter(c => c.trim() !== '');
     
     try {
       await updateClient(clientId, {
@@ -68,7 +81,7 @@ export const ClientCard = ({ client, onDeleteSuccess }) => {
         contacts: filteredContacts
       });
       setIsEditing(false);
-      setStatus({ type: 'success', msg: 'Kliento duomenys sėkmingai atnaujinti!' });
+      setStatus({ type: 'success', msg: ERRORS.CLIENT_UPDATE_SUCCESS });
     } catch (err) {
       const backendCode = err.message;
       let errorMsg = ERRORS[backendCode] || ERRORS.GLOBAL_UNKNOWN_ERROR || 'Nepavyko atnaujinti kliento duomenų.';
@@ -88,7 +101,7 @@ export const ClientCard = ({ client, onDeleteSuccess }) => {
     
     try {
       await deleteClient(clientId);
-      const successMsg = 'Klientas sėkmingai pašalintas iš sistemos.';
+      const successMsg = ERRORS.CLIENT_DELETE_SUCCESS;
       
       if (onDeleteSuccess) {
         onDeleteSuccess(successMsg);
@@ -117,12 +130,13 @@ export const ClientCard = ({ client, onDeleteSuccess }) => {
     setEditData({ ...editData, contacts: newContacts.length ? newContacts : [''] });
   };
 
+  console.log("e");
+  
   const isDisapproved = client.tag === 'disapproved';
   const isPending = client.tag === 'pending';
-  const isArchived = client.tag === 'Archived Client';
-  const isActive = client.tag === 'Active Client';
+  const isArchived = client.tag === 'archived client';
+  const isActive = client.tag === 'active client';
 
-  // Pakeista: iš ghosted išimta 'isPending' būsena
   const isGhosted = (isDisapproved || isArchived) && !isEditing;
   const useAbsoluteMarketer = isDisapproved || isPending;
   
@@ -137,7 +151,7 @@ export const ClientCard = ({ client, onDeleteSuccess }) => {
     <>
       <div className={`relative bg-white dark:bg-[#292a2d] rounded border transition-all duration-300 p-4 shadow-sm group ${isGhosted ? "border-slate-200 dark:border-slate-800 opacity-60 bg-slate-50/50 dark:bg-slate-900/10" : "border-[#dadce0] dark:border-[#3c4043]"} ${isSubmitting ? "opacity-50 pointer-events-none" : ""}`}>
         {useAbsoluteMarketer && !isEditing && (
-          <div className="absolute bottom-2 right-2 flex items-center gap-1 text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-800/50 px-1.5 py-0.5 rounded opacity-70">
+          <div className="absolute bottom-2 right-2 flex items-center gap-1 text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-800/50 px-1.5 py-0.5 rounded opacity-70 text-right">
             <MdPerson size={10} /> {client.marketer || 'Nenurodytas'}
           </div>
         )}
@@ -199,8 +213,8 @@ export const ClientCard = ({ client, onDeleteSuccess }) => {
             </div>
 
             <div className="flex gap-2 justify-end pt-2">
-              <button onClick={() => { setIsEditing(false); setEditData({...client, contacts: client.contacts || ['']}); setStatus({ type: '', msg: '' }); }} className="p-1.5 rounded text-[#5f6368] dark:text-[#9aa0a6] hover:bg-[#f1f3f4] dark:hover:bg-[#3c4043] transition-colors"><MdClose size={16} /></button>
-              <button onClick={handleSave} className="p-1.5 rounded text-white bg-[#1a73e8] hover:bg-[#1557b0] transition-colors shadow-sm"><MdCheck size={16} /></button>
+              <button type="button" onClick={() => { setIsEditing(false); setEditData({...client, contacts: client.contacts || ['']}); setStatus({ type: '', msg: '' }); }} className="p-1.5 rounded text-[#5f6368] dark:text-[#9aa0a6] hover:bg-[#f1f3f4] dark:hover:bg-[#3c4043] transition-colors"><MdClose size={16} /></button>
+              <button type="button" onClick={handleSave} className="p-1.5 rounded text-white bg-[#1a73e8] hover:bg-[#1557b0] transition-colors shadow-sm"><MdCheck size={16} /></button>
             </div>
           </div>
         ) : (
@@ -238,7 +252,7 @@ export const ClientCard = ({ client, onDeleteSuccess }) => {
                     </span>
                   </div>
                   {!useAbsoluteMarketer && (
-                    <div className="flex items-center gap-1 text-[11px] text-slate-500 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded shrink-0">
+                    <div className="flex items-center gap-1 text-[11px] text-slate-500 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded shrink-0 text-right">
                       <MdPerson size={12} /> {client.marketer || 'Nenurodytas'}
                     </div>
                   )}

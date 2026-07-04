@@ -28,7 +28,7 @@ export const DashboardHeader = () => {
             className="flex items-center gap-2 px-3 py-1.5 rounded hover:bg-[#f1f3f4] dark:hover:bg-[#3c4043] text-[#5f6368] dark:text-[#9aa0a6] text-[13px] transition-colors border border-transparent hover:border-[#dadce0] dark:hover:border-[#5f6368]"
           >
             {showTrash ? <MdVisibilityOff size={18} /> : <MdVisibility size={18} />}
-            {showTrash ? "Slėpti atmestus" : "Rodyti atmestus"}
+            {showTrash ? "Slėpti neaktualius" : "Rodyti neaktualius"}
           </button>
         )}
       </div>

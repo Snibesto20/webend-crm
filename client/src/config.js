@@ -15,6 +15,7 @@ export const ERRORS = {
   CLIENT_FETCH_ERROR: "Nepavyko užkrauti klientų sąrašo.",
   CLIENT_CREATE_ERROR: "Nepavyko sukurti kliento paskyros.",
   CLIENT_UPDATE_ERROR: "Nepavyko atnaujinti kliento duomenų.",
+  CLIENT_UPDATE_SUCCESS: "Kliento duomenys sėkmingai atnaujinti!",
   CLIENT_DELETE_ERROR: "Nepavyko ištrinti kliento iš sistemos.",
   CLIENT_DELETE_SUCCESS: "Kliento paskyra sėkmingai pašalinta iš sistemos.",
 
