@@ -1,14 +1,15 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import { useStore, TAG_PRIORITY } from '../store/useStore';
 import { ApiKeyHeader } from '../components/headers/ApiKeyHeader';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { TagBadge } from '../components/TagBadge';
-import { ClientCard } from '../components/ClientCard';
+import { StatusMessage } from "../components/StatusMessage";
+import { ERRORS, VALIDATION_CONFIG } from '../config';
 import { 
   MdDelete, MdVpnKey, MdPerson, MdShield, 
-  MdSecurity, MdTrendingUp, MdClose, MdInfoOutline, 
-  MdSearch, MdList, MdBadge, MdCheckCircle, MdError, 
-  MdArrowBack, MdPeople, MdBolt, MdBlock
+  MdSecurity, MdTrendingUp, MdClose, 
+  MdSearch, MdList, MdBadge, MdPeople, MdBlock, MdContentCopy
 } from 'react-icons/md';
 
 const ApiKeyProfileModal = ({ user, clients, onClose }) => {
@@ -70,7 +71,7 @@ const ApiKeyProfileModal = ({ user, clients, onClose }) => {
                   <div className="flex items-baseline gap-2">
                     <span className="text-[32px] font-light text-[#202124] dark:text-[#e8eaed] leading-none">{totalUserClientsCount}</span>
                   </div>
-                  <div className="text-[#5f6368] dark:text-[#9aa0a6] mt-1 tracking-wide text-[10px]">Priskirti klientai</div>
+                  <div className="text-[#5f6368] dark:text-[#9aa0a6] mt-1 tracking-wide text-[10px]">Pridėti klientai</div>
                 </div>
                 <div className="pt-6 border-t border-[#dadce0] dark:border-[#3c4043]">
                   <div className="mb-2">
@@ -79,7 +80,7 @@ const ApiKeyProfileModal = ({ user, clients, onClose }) => {
                         <MdSecurity size={10} /> Administratorius
                       </div>
                     ) : (
-                      <div className="flex items-center gap-1 text-[9px] font-black w-fit tracking-tighter text-blue-600 bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 px-1.5 py-0.5 rounded border border-blue-200 dark:border-red-800/40">
+                      <div className="flex items-center gap-1 text-[9px] font-black w-fit tracking-tighter text-blue-600 bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 px-1.5 py-0.5 rounded border border-blue-200 dark:border-[#dadce0] dark:border-[#3c4043]">
                         <MdTrendingUp size={10} /> Marketingas
                       </div>
                     )}
@@ -95,12 +96,12 @@ const ApiKeyProfileModal = ({ user, clients, onClose }) => {
                   <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
                     <MdList size={24} className="text-[#1a73e8]" />
                   </div>
-                  <h2 className="text-[16px] font-medium text-[#202124] dark:text-[#e8eaed]">Priskirti klientai</h2>
+                  <h2 className="text-[16px] font-medium text-[#202124] dark:text-[#e8eaed]">Pridėti klientai</h2>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="relative w-48">
                     <MdSearch className="absolute left-2.5 top-2.5 text-[#5f6368]" size={16} />
-                    <input type="text" placeholder="Ieškoti..." className={`${inputClass} pl-9 h-[32px] text-[12px]`} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                    <input type="text" className={`${inputClass} pl-9 h-[32px] text-[12px]`} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                   </div>
                   <span className="text-[12px] bg-[#f1f3f4] dark:bg-[#3c4043] text-[#5f6368] dark:text-[#9aa0a6] px-2.5 py-0.5 rounded-full font-medium shrink-0">
                     {totalUserClientsCount}
@@ -172,13 +173,24 @@ export const ApiKeyManager = () => {
     return clients.filter(c => c.marketer === ownerName).length;
   };
 
+  const handleCopyKey = async (e, keyString) => {
+    e.stopPropagation();
+    setStatus({ type: '', msg: '' });
+    try {
+      await navigator.clipboard.writeText(keyString);
+      setTimeout(() => setStatus({ type: 'success', msg: ERRORS.FORM_COPY_SUCCESS }));
+    } catch (err) {
+      setTimeout(() => setStatus({ type: 'error', msg: ERRORS.FORM_COPY_ERROR }));
+    }
+  };
+
   const renderRoleTag = (role) => {
     return role === 'admin' ? (
       <div className="flex items-center justify-start gap-1 text-[9px] font-black tracking-tighter w-fit text-red-600 bg-red-100 dark:bg-red-900/30 dark:text-red-400 px-1.5 py-0.5 rounded border border-red-200 dark:border-red-800/40">
         <MdSecurity size={10} /> Administratorius
       </div>
     ) : (
-      <div className="flex items-center justify-start gap-1 text-[9px] font-black tracking-tighter w-fit text-blue-600 bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 px-1.5 py-0.5 rounded border border-blue-200 dark:border-red-800/40">
+      <div className="flex items-center justify-start gap-1 text-[9px] font-black tracking-tighter w-fit text-blue-600 bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-800/40">
         <MdTrendingUp size={10} /> Marketingas
       </div>
     );
@@ -193,36 +205,39 @@ export const ApiKeyManager = () => {
     setStatus({ type: '', msg: '' });
 
     if (!trimmedOwner && !trimmedKey) {
-      setTimeout(() => setStatus({ type: 'error', msg: 'Prašome užpildyti visus laukus: įveskite savininką ir API raktą!' }), 10);
+      setTimeout(() => setStatus({ type: 'error', msg: ERRORS.FORM_ALL_FIELDS_REQUIRED }));
       return;
     }
 
     if (!trimmedOwner) {
-      setTimeout(() => setStatus({ type: 'error', msg: 'Prašome įvesti rakto savininką / slapyvardį!' }), 10);
+      setTimeout(() => setStatus({ type: 'error', msg: ERRORS.FORM_OWNER_REQUIRED }));
       return;
     }
 
     if (!trimmedKey) {
-      setTimeout(() => setStatus({ type: 'error', msg: 'Prašome įvesti API raktą!' }), 10);
+      setTimeout(() => setStatus({ type: 'error', msg: ERRORS.FORM_KEY_REQUIRED }));
       return;
     }
 
-    if (trimmedKey.length < 5) {
-      setTimeout(() => setStatus({ type: 'error', msg: 'API raktas privalo būti ne trumpesnis nei 5 simboliai!' }), 10);
+    if (trimmedKey.length < VALIDATION_CONFIG.MIN_KEY_LENGTH) {
+      setTimeout(() => setStatus({ type: 'error', msg: ERRORS.KEY_TOO_SHORT }));
       return;
     }
 
-    const result = await createApiKey({
-      owner: trimmedOwner,
-      key: trimmedKey,
-      role: formData.role
-    });
+    try {
+      await createApiKey({
+        owner: trimmedOwner,
+        key: trimmedKey,
+        role: formData.role
+      });
 
-    if (result) {
       setFormData({ owner: '', key: '', role: 'marketing' });
-      setTimeout(() => setStatus({ type: 'success', msg: 'Naujas prieigos raktas sėkmingai sukurtas!' }), 10);
-    } else {
-      setTimeout(() => setStatus({ type: 'error', msg: 'Nepavyko sukurti rakto.' }), 10);
+      setTimeout(() => setStatus({ type: 'success', msg: ERRORS.FORM_CREATE_SUCCESS }));
+    } catch (err) {
+      const backendCode = err.message;
+      const errorMsg = ERRORS[backendCode] || ERRORS.FORM_CREATE_ERROR;
+      
+      setTimeout(() => setStatus({ type: 'error', msg: errorMsg }));
     }
   };
 
@@ -230,7 +245,7 @@ export const ApiKeyManager = () => {
     setStatus({ type: '', msg: '' });
     const success = await deleteApiKey(deleteModal.id);
     if (success) {
-      setTimeout(() => setStatus({ type: 'success', msg: `Prieigos raktas (${deleteModal.owner}) panaikintas!` }), 10);
+      setTimeout(() => setStatus({ type: 'success', msg: `Prieigos raktas (${deleteModal.owner}) panaikintas sėkmingai.` }));
     }
     setDeleteModal({ isOpen: false, id: null, owner: '' });
   };
@@ -262,13 +277,13 @@ export const ApiKeyManager = () => {
                 <label className="flex items-center gap-2 text-[11px] text-[#5f6368] dark:text-[#9aa0a6] tracking-wider">
                   <MdPerson size={14} className="text-[#1a73e8]" /> Savininkas
                 </label>
-                <input type="text" placeholder="Vardas / Slapyvardis" className={`${inputClass} h-[38px]`} value={formData.owner} onChange={e => setFormData({...formData, owner: e.target.value})} />
+                <input type="text" className={`${inputClass} h-[38px]`} value={formData.owner} onChange={e => setFormData({...formData, owner: e.target.value})} />
               </div>
               <div className="space-y-1.5">
                 <label className="flex items-center gap-2 text-[11px] text-[#5f6368] dark:text-[#9aa0a6] tracking-wider">
-                  <MdShield size={14} className="text-[#1a73e8]" /> API Raktas
+                  <MdShield size={14} className="text-[#1a73e8]" /> Prieigos raktas
                 </label>
-                <input type="text" placeholder="Slaptas raktas (min. 5 sim.)" className={`${inputClass} h-[38px] text-[12px]`} value={formData.key} onChange={e => setFormData({...formData, key: e.target.value})} />
+                <input type="text" className={`${inputClass} h-[38px] text-[12px]`} value={formData.key} onChange={e => setFormData({...formData, key: e.target.value})} />
               </div>
               <div className="space-y-1.5">
                 <label className="flex items-center gap-2 text-[11px] text-[#5f6368] dark:text-[#9aa0a6] tracking-wider">
@@ -314,17 +329,17 @@ export const ApiKeyManager = () => {
                     </th>
                     <th className="py-3 px-6 font-normal text-left align-middle">
                       <span className="inline-flex items-center gap-2 justify-start text-[13px] text-[#5f6368] dark:text-[#9aa0a6] tracking-wider">
-                        <MdPeople size={14} className="text-[#1a73e8]" /> Priskirti klientai
+                        <MdPeople size={14} className="text-[#1a73e8]" /> Pridėti klientai
                       </span>
                     </th>
                     <th className="py-3 px-6 font-normal text-left align-middle">
                       <span className="inline-flex items-center gap-2 justify-start text-[13px] text-[#5f6368] dark:text-[#9aa0a6] tracking-wider">
-                        <MdShield size={14} className="text-[#1a73e8]" /> Prieigos Raktas
+                        <MdShield size={14} className="text-[#1a73e8]" /> Prieigos raktas
                       </span>
                     </th>
                     <th className="py-3 px-6 font-normal text-right w-24 align-middle">
                       <span className="inline-flex items-center gap-2 justify-end text-[13px] text-[#5f6368] dark:text-[#9aa0a6] tracking-wider">
-                        <MdBolt size={14} className="text-[#1a73e8]" /> Veiksmai
+                        <MdDelete size={14} className="text-[#1a73e8]" /> Ištrynimas
                       </span>
                     </th>
                   </tr>
@@ -339,9 +354,16 @@ export const ApiKeyManager = () => {
                       <td className="py-3 px-6 font-bold text-slate-500 dark:text-slate-400 text-left align-middle">
                         {getUserClientCount(item.owner)}
                       </td>
-                      <td className="py-3 px-6 font-mono text-[12px] text-slate-400 dark:text-slate-500 max-w-[140px] text-left align-middle relative">
-                        <span className="group-hover:hidden tracking-widest block">••••••••</span>
-                        <span className="hidden group-hover:block truncate">{item.key}</span>
+                      <td className="py-3 px-6 font-mono text-[12px] max-w-[180px] text-left align-middle overflow-hidden">
+                        <div className="inline-flex items-center gap-2 max-w-full">
+                          <div className="relative h-5 overflow-hidden w-20 shrink-0">
+                            <span className="absolute inset-0 tracking-[0.3em] text-slate-400 dark:text-slate-500 transition-all duration-300 transform group-hover:opacity-0 group-hover:tracking-normal group-hover:scale-95">••••••••</span>
+                            <span className="absolute inset-0 truncate opacity-0 text-slate-400 dark:text-slate-500 transition-all duration-300 transform scale-95 group-hover:opacity-100 group-hover:scale-100">{item.key}</span>
+                          </div>
+                          <button onClick={(e) => handleCopyKey(e, item.key)} className="p-1 text-slate-400 dark:text-slate-500 rounded shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" title="Kopijuoti raktą">
+                            <MdContentCopy size={14} />
+                          </button>
+                        </div>
                       </td>
                       <td className="py-3 px-6 text-right align-middle">
                         <div className="flex justify-end">
@@ -350,7 +372,7 @@ export const ApiKeyManager = () => {
                               <MdBlock size={16} />
                             </div>
                           ) : (
-                            <button onClick={(e) => { e.stopPropagation(); setDeleteModal({ isOpen: true, id: item._id, owner: item.owner }); }} className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-[#1a73e8] hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-all opacity-0 group-hover:opacity-100 inline-flex items-center justify-center">
+                            <button onClick={(e) => { e.stopPropagation(); setDeleteModal({ isOpen: true, id: item._id, owner: item.owner }); }} className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-[#1a73e8] hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded inline-flex items-center justify-center">
                               <MdDelete size={16} />
                             </button>
                           )}
@@ -364,8 +386,10 @@ export const ApiKeyManager = () => {
           </div>
         </div>
       </main>
-
-      {status.msg && <StatusMessage type={status.type} msg={status.msg} onClose={handleCloseStatus} />}
+      
+      <AnimatePresence>
+        {status.msg && <StatusMessage type={status.type} msg={status.msg} onClose={handleCloseStatus} />}
+      </AnimatePresence>
     </div>
   );
 };

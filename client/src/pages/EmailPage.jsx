@@ -3,7 +3,8 @@ import { useStore } from '../store/useStore';
 import { EmailPageHeader } from '../components/headers/EmailPageHeader';
 import { ClientRegistry } from '../components/ClientRegistry';
 import { MdSend, MdEmail, MdPerson, MdBusiness } from 'react-icons/md';
-import StatusMessage from '../components/StatusMessage';
+import { StatusMessage } from '../components/StatusMessage';
+import { AnimatePresence } from 'framer-motion';
 
 export const EmailPage = () => {
   const { sendEmail, clients, addClient } = useStore();
@@ -87,8 +88,9 @@ export const EmailPage = () => {
     <div className="flex-1 flex flex-col h-screen bg-[#f8f9fa] dark:bg-[#1e1e1e] overflow-hidden">
       <EmailPageHeader />
       <main className="flex-1 p-6 overflow-hidden">
-        <div className="max-w-7xl mx-auto h-full grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
+        <div className="max-w-7xl mx-auto h-full flex gap-6 justify-center items-start">
+          
+          <div className="flex-1 max-w-2xl shrink-0">
             <div className="bg-white dark:bg-[#292a2d] border border-[#dadce0] dark:border-[#3c4043] rounded shadow-sm">
               <div className="p-6 border-b border-[#dadce0] dark:border-[#3c4043] flex items-center gap-3">
                 <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
@@ -98,29 +100,33 @@ export const EmailPage = () => {
               </div>
               <form onSubmit={handleSubmit} noValidate={true} className="p-6 space-y-4">
                 <div className="space-y-1.5">
-                  <label className="flex items-center gap-2 text-[11px] font-bold text-[#5f6368] dark:text-[#9aa0a6] uppercase tracking-wider">
+                  <label className="flex items-center gap-2 text-[11px] text-[#5f6368] dark:text-[#9aa0a6] tracking-wider">
                     <MdBusiness size={14} className="text-[#1a73e8]" /> Kliento pavadinimas
                   </label>
-                  <input type="text" className={inputClass} value={form.name} onChange={(e) => setForm({...form, name: e.target.value})} placeholder="PVZ: WEBEND LIETUVA" />
+                  <input type="text" className={`${inputClass} h-[38px]`} value={form.name} onChange={(e) => setForm({...form, name: e.target.value})} />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="flex items-center gap-2 text-[11px] font-bold text-[#5f6368] dark:text-[#9aa0a6] uppercase tracking-wider">
-                    <MdPerson size={14} className="text-[#1a73e8]" /> Gavėjo el. paštas
+                  <label className="flex items-center gap-2 text-[11px] text-[#5f6368] dark:text-[#9aa0a6] tracking-wider">
+                    <MdPerson size={14} className="text-[#1a73e8]" /> Kliento el. paštas
                   </label>
-                  <input type="text" className={inputClass} value={form.to} onChange={(e) => setForm({...form, to: e.target.value})} placeholder="pvz. pastas@imone.lt" />
+                  <input type="text" className={`${inputClass} h-[38px]`} value={form.to} onChange={(e) => setForm({...form, to: e.target.value})} />
                 </div>
-                <button type="submit" disabled={loading} className="w-full bg-[#1a73e8] hover:bg-[#1557b0] disabled:bg-gray-300 dark:disabled:bg-[#3c4043] text-white text-[13px] font-bold py-2.5 rounded transition-all flex items-center justify-center gap-2 shadow-sm active:scale-[0.98]">
+                <button type="submit" disabled={loading} className="w-full bg-[#1a73e8] hover:bg-[#1557b0] disabled:bg-gray-300 dark:disabled:bg-[#3c4043] text-white text-[13px] h-[38px] rounded transition-all shadow-sm active:scale-[0.98] flex items-center justify-center gap-2">
                   {loading ? "Vykdoma..." : <><MdSend size={16} /> Siųsti laišką</>}
                 </button>
               </form>
             </div>
           </div>
-          <div className="lg:col-span-1 h-[calc(100vh-140px)] overflow-hidden border border-[#dadce0] dark:border-[#3c4043] rounded shadow-sm bg-white dark:bg-[#292a2d]">
+
+          <div className="w-[260px] shrink-0 hidden lg:block h-[calc(100vh-140px)] overflow-hidden border border-[#dadce0] dark:border-[#3c4043] rounded shadow-sm bg-white dark:bg-[#292a2d]">
             <ClientRegistry />
           </div>
+
         </div>
       </main>
-      {status.msg && <StatusMessage type={status.type} msg={status.msg} onClose={() => setStatus({ type: '', msg: '' })} />}
+      <AnimatePresence>
+        {status.msg && <StatusMessage type={status.type} msg={status.msg} onClose={() => setStatus({ type: '', msg: '' })} />}
+      </AnimatePresence>
     </div>
   );
 };

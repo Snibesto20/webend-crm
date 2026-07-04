@@ -4,92 +4,139 @@ import { auth } from '../middleware.js';
 
 const router = express.Router();
 
+const VALID_TAGS = [
+  'potential 1', 'potential 2', 'potential 3', 'potential 4', 'potential 5',
+  'potential 6', 'potential 7', 'potential 8', 'potential 9', 'potential 10',
+  'pending', 'disapproved', 'unprocessed'
+];
+
 router.get('/', auth(['admin', 'marketing']), async (req, res) => {
   try {
-    const clients = await Client.find().sort({ createdAt: -1 });
+    const clients = await Client.find().sort({ createdAt: -1 }).lean();
     res.json(clients);
   } catch (err) { 
-    res.status(500).json({ error: `Nepavyko gauti klientų sąrašo: ${err.message}` }); 
+    res.status(500).json({ code: 'CLIENT_FETCH_ERROR' }); 
   }
 });
 
 router.post('/', auth(['admin']), async (req, res) => {
   try {
-    const { name, contacts, tag } = req.body;
+    const { name, contacts, tag, serviceNeeded, notes } = req.body;
+    
     if (!name || !name.trim()) {
-      return res.status(400).json({ error: "Klaida: Įmonės pavadinimas yra privalomas ir negali būti tuščias." });
+      return res.status(400).json({ code: 'CLIENT_NAME_REQUIRED' });
     }
-    if (!contacts || !Array.isArray(contacts) || contacts.filter(c => c.trim() !== '').length === 0) {
-      return res.status(400).json({ error: "Klaida: Būtina pridėti bent vieną validų kontaktą (El. paštą arba Tel. nr.)." });
+    
+    const normalizedTag = tag ? String(tag).trim().toLowerCase() : '';
+    if (!VALID_TAGS.includes(normalizedTag)) {
+      return res.status(400).json({ code: 'CLIENT_TAG_REQUIRED' });
     }
-    if (!tag) {
-      return res.status(400).json({ error: "Klaida: Nepasirinktas kliento statusas." });
+
+    const filteredContacts = Array.isArray(contacts) 
+      ? contacts.map(c => String(c).trim()).filter(c => c !== '')
+      : [];
+
+    if (normalizedTag === 'unprocessed' && filteredContacts.length === 0) {
+      return res.status(400).json({ code: 'CLIENT_CONTACTS_REQUIRED_FOR_UNPROCESSED' });
     }
 
     const nameUpper = name.trim().toUpperCase();
-    const exists = await Client.findOne({ name: nameUpper });
+    const exists = await Client.findOne({ name: nameUpper }).lean();
     if (exists) {
-      return res.status(400).json({ error: `Klaida: Klientas su pavadinimu "${nameUpper}" jau egzistuoja sistemoje.` });
+      return res.status(400).json({ code: 'CLIENT_DUPLICATE_NAME', meta: { name: nameUpper } });
     }
 
-    const clientData = {
-      ...req.body,
+    const isGhosted = normalizedTag === 'disapproved';
+
+    const cleanClientData = {
       name: nameUpper,
+      tag: normalizedTag,
+      contacts: filteredContacts,
+      serviceNeeded: isGhosted ? '' : (serviceNeeded ? String(serviceNeeded).trim().substring(0, 255) : ''),
+      notes: notes ? String(notes).trim().substring(0, 2000) : '',
       marketer: req.user?.owner || 'Nenurodyta'
     };
 
-    const newClient = new Client(clientData);
+    const newClient = new Client(cleanClientData);
     await newClient.save();
     res.status(201).json(newClient);
   } catch (err) { 
     if (err.name === 'ValidationError') {
-      const messages = Object.values(err.errors).map(e => e.message).join(', ');
-      return res.status(400).json({ error: `Duomenų validacijos klaida: ${messages}` });
+      return res.status(400).json({ code: 'GLOBAL_VALIDATION_ERROR' });
     }
-    res.status(400).json({ error: `Nepavyko sukurti kliento paskyros: ${err.message}` }); 
+    res.status(400).json({ code: 'CLIENT_CREATE_ERROR' }); 
   }
 });
 
 router.put('/:id', auth(['admin']), async (req, res) => {
   try {
     const { id } = req.params;
-    const updateData = { ...req.body };
+    const { name, contacts, tag, serviceNeeded, notes } = req.body;
+    
+    const existingClient = await Client.findById(id);
+    if (!existingClient) return res.status(404).json({ code: 'GLOBAL_NOT_FOUND' });
 
-    if (updateData.name !== undefined && !updateData.name.trim()) {
-      return res.status(400).json({ error: "Klaida redaguojant: Įmonės pavadinimas negali būti tuščias tekstas." });
-    }
-    if (updateData.contacts !== undefined && (!Array.isArray(updateData.contacts) || updateData.contacts.filter(c => c.trim() !== '').length === 0)) {
-      return res.status(400).json({ error: "Klaida redaguojant: Kontaktų sąrašas negali likti visiškai tuščias." });
-    }
+    const updateData = {};
 
-    if (updateData.name) {
-      updateData.name = updateData.name.trim().toUpperCase();
-      const duplicateExists = await Client.findOne({ name: updateData.name, _id: { $ne: id } });
+    if (name !== undefined) {
+      if (!name.trim()) return res.status(400).json({ code: 'CLIENT_NAME_REQUIRED' });
+      const nameUpper = name.trim().toUpperCase();
+      const duplicateExists = await Client.findOne({ name: nameUpper, _id: { $ne: id } }).lean();
       if (duplicateExists) {
-        return res.status(400).json({ error: `Klaida: Pavadinimas "${updateData.name}" jau užimtas kito kliento.` });
+        return res.status(400).json({ code: 'CLIENT_DUPLICATE_NAME', meta: { name: nameUpper } });
       }
+      updateData.name = nameUpper;
+    }
+
+    if (tag !== undefined) {
+      const normalizedTag = String(tag).trim().toLowerCase();
+      if (!VALID_TAGS.includes(normalizedTag)) return res.status(400).json({ code: 'CLIENT_TAG_REQUIRED' });
+      updateData.tag = normalizedTag;
+    }
+
+    const targetTag = updateData.tag || existingClient.tag;
+
+    if (contacts !== undefined) {
+      if (!Array.isArray(contacts)) return res.status(400).json({ code: 'CLIENT_CONTACTS_REQUIRED_FOR_UNPROCESSED' });
+      const filteredContacts = contacts.map(c => String(c).trim()).filter(c => c !== '');
+      if (targetTag === 'unprocessed' && filteredContacts.length === 0) {
+        return res.status(400).json({ code: 'CLIENT_CONTACTS_REQUIRED_FOR_UNPROCESSED' });
+      }
+      updateData.contacts = filteredContacts;
+    } else if (targetTag === 'unprocessed' && existingClient.contacts.length === 0) {
+      return res.status(400).json({ code: 'CLIENT_CONTACTS_REQUIRED_FOR_UNPROCESSED' });
+    }
+
+    const isGhosted = targetTag === 'disapproved';
+    if (isGhosted) {
+      updateData.serviceNeeded = '';
+    } else if (serviceNeeded !== undefined) {
+      updateData.serviceNeeded = String(serviceNeeded).trim().substring(0, 255);
+    }
+
+    if (notes !== undefined) {
+      updateData.notes = String(notes).trim().substring(0, 2000);
     }
 
     const updated = await Client.findByIdAndUpdate(
       id, 
-      updateData, 
+      { $set: updateData }, 
       { new: true, runValidators: true }
     );
     
-    if (!updated) return res.status(404).json({ error: "Atnaujinimo klaida: Klientas nerastas sistemoje arba jau ištrintas." });
     res.json(updated);
   } catch (err) { 
-    res.status(400).json({ error: `Nepavyko atnaujinti kliento duomenų: ${err.message}` }); 
+    res.status(400).json({ code: 'CLIENT_UPDATE_ERROR' }); 
   }
 });
 
 router.delete('/:id', auth(['admin']), async (req, res) => {
   try {
     const deleted = await Client.findByIdAndDelete(req.params.id);
-    if (!deleted) return res.status(404).json({ error: "Trinimo klaida: Nerastas pasirenkamas klientas." });
+    if (!deleted) return res.status(404).json({ code: 'GLOBAL_NOT_FOUND' });
     res.json({ message: 'Klientas sėkmingai pašalintas iš sistemos.' });
   } catch (err) { 
-    res.status(500).json({ error: `Nepavyko ištrinti kliento iš duomenų bazės: ${err.message}` }); 
+    res.status(500).json({ code: 'CLIENT_DELETE_ERROR' }); 
   }
 });
 

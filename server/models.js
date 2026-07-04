@@ -13,7 +13,7 @@ export const ClientRegistry = mongoose.model('ClientRegistry', new mongoose.Sche
 
 const ClientSchema = new mongoose.Schema({
   name: { type: String, required: true },
-  tag: { type: String, default: 'pending' },
+  tag: { type: String, default: 'laukia' },
   serviceNeeded: { type: String, default: '' },
   notes: { type: String, default: '' },
   moneyMade: { type: Number, default: 0 },

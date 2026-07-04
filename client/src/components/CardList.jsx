@@ -4,14 +4,49 @@ import { ClientCard } from './ClientCard';
 import { MdViewModule } from 'react-icons/md';
 
 export const CardList = () => {
+  // Pasiimame būsenas tiesiai iš Zustand – pasikeitus bet kuriai iš jų, React perbraižys sąrašą
   const clients = useStore((state) => state.clients);
   const showTrash = useStore((state) => state.showTrash);
+  const filterType = useStore((state) => state.filterType);
 
   const sortedClients = useMemo(() => {
-    return [...clients]
-      .filter(c => showTrash ? true : !['disapproved', 'Archived Client'].includes(c.tag))
-      .sort((a, b) => TAG_PRIORITY[b.tag] - TAG_PRIORITY[a.tag]);
-  }, [clients, showTrash]);
+    // 1. Pirmiausia išfiltruojame klientus pagal abu filtrus
+    const filtered = [...clients].filter(c => {
+      const tag = c.tag?.toLowerCase();
+
+      // Filtro sąlyga 1: Jei pasirinkta rodyti tik neapdorotus
+      if (filterType === 'unprocessed') {
+        return tag === 'unprocessed';
+      }
+
+      // Filtro sąlyga 2: Jei pasirinkta "Apdoroti", neapdorotų čia nerodome
+      if (tag === 'unprocessed') {
+        return false;
+      }
+
+      // Filtro sąlyga 3: Senoji "Slėpti neaktualius" (showTrash) logika apdorotiems klientams
+      if (!showTrash) {
+        return !['disapproved', 'archived client', 'pending'].includes(tag);
+      }
+
+      return true;
+    });
+
+    // 2. TIKRIEJI DEBUG LOGAI KONSOLĖJE (F12)
+    console.log("=== CARDLIST FILTRAVIMAS ===");
+    console.log("Gauti klientai iš store:", clients.length);
+    console.log("Aktyvus puslapis (filterType):", filterType);
+    console.log("Rodyti visus neaktualius (showTrash):", showTrash);
+    console.log("Klientų skaičius po filtravimo:", filtered.length);
+    console.log("============================");
+
+    // 3. Rūšiuojame išfiltruotus klientus pagal prioritetą
+    return filtered.sort((a, b) => {
+      const prioB = TAG_PRIORITY[b.tag] || 0;
+      const prioA = TAG_PRIORITY[a.tag] || 0;
+      return prioB - prioA;
+    });
+  }, [clients, showTrash, filterType]);
 
   return (
     <div className="h-full flex flex-col bg-white dark:bg-[#292a2d] border border-[#dadce0] dark:border-[#3c4043] rounded shadow-sm overflow-hidden">
@@ -30,7 +65,7 @@ export const CardList = () => {
       <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
         {sortedClients.length === 0 ? (
           <div className="h-full flex items-center justify-center text-[#5f6368] dark:text-[#9aa0a6] text-sm italic">
-            Nėra rodomų klientų kortelių.
+            Klientų kortelių su šia parinktimi nėra.
           </div>
         ) : (
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 auto-rows-max">

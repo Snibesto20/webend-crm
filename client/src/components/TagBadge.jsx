@@ -1,8 +1,9 @@
-import { MdArchive, MdCancel, MdPending, MdTrendingUp, MdCheckCircle, MdVerifiedUser, MdStar } from 'react-icons/md';
+import { MdArchive, MdCancel, MdPending, MdTrendingUp, MdCheckCircle, MdVerifiedUser, MdStar, MdPhoneInTalk } from 'react-icons/md';
 
 export const translateTag = (tag) => {
   if (!tag) return '';
   const translations = {
+    'unprocessed': 'neapdorota',
     'pending': 'laukia',
     'disapproved': 'atmesta',
     'approved': 'patvirtinta',
@@ -22,6 +23,9 @@ export const translateTag = (tag) => {
 
 export const getOptionColorClass = (tag) => {
   const t = tag.toLowerCase();
+  if (t === 'unprocessed') {
+    return "text-emerald-600 dark:text-emerald-400 font-medium";
+  }
   if (t === 'disapproved' || ['potential 1', 'potential 2', 'potential 3', 'potential 4'].includes(t)) {
     return "text-red-600 dark:text-red-400 font-medium";
   }
@@ -43,6 +47,9 @@ export const getOptionColorClass = (tag) => {
 const getTagStyles = (tag) => {
   const t = tag.toLowerCase();
   
+  if (t === 'unprocessed') {
+    return { color: "bg-emerald-50 text-emerald-600 border-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-400", icon: MdPhoneInTalk };
+  }
   if (t === 'disapproved' || ['potential 1', 'potential 2', 'potential 3', 'potential 4'].includes(t)) {
     return { color: "bg-red-50 text-red-600 border-red-600 dark:bg-red-950/30 dark:text-red-400 dark:border-red-400", icon: MdCancel };
   }

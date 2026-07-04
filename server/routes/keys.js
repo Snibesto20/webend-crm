@@ -4,34 +4,76 @@ import { auth } from '../middleware.js';
 
 const router = express.Router();
 
+const MIN_KEY_LENGTH = 5;
+const ALLOWED_ROLES = ['admin', 'marketing'];
+
 router.get('/', auth(['admin']), async (req, res) => {
   try {
-    const keys = await ApiKey.find();
+    const keys = await ApiKey.find().select('owner key role').lean();
     res.json(keys);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { 
+    res.status(500).json({ error: "KEY_FETCH_ERROR" }); 
+  }
 });
 
 router.post('/', auth(['admin']), async (req, res) => {
   try {
     const { owner, key, role } = req.body;
 
-    if (!key || key.trim().length < 5) {
-      return res.status(400).json({ error: "API raktas privalo būti ne trumpesnis nei 5 simboliai." });
+    if (!owner || !owner.trim()) {
+      return res.status(400).json({ error: "KEY_OWNER_REQUIRED" });
     }
 
-    const newKey = new ApiKey({ owner, key: key.trim(), role });
-    await newKey.save();
-    res.status(201).json(newKey);
-  } catch (err) { res.status(400).json({ error: "Raktas jau yra sistemoje." }); }
+    if (!key || String(key).trim().length < MIN_KEY_LENGTH) {
+      return res.status(400).json({ error: "KEY_TOO_SHORT" });
+    }
+
+    if (!ALLOWED_ROLES.includes(role)) {
+      return res.status(400).json({ error: "KEY_INVALID_ROLE" });
+    }
+
+    const trimmedOwner = owner.trim();
+    const trimmedKey = key.trim();
+
+    const ownerExists = await ApiKey.findOne({ owner: trimmedOwner }).lean();
+    if (ownerExists) {
+      return res.status(400).json({ error: "KEY_DUPLICATE_OWNER" });
+    }
+
+    const keyExists = await ApiKey.findOne({ key: trimmedKey }).lean();
+    if (keyExists) {
+      return res.status(400).json({ error: "KEY_DUPLICATE" });
+    }
+
+    const newKeyDoc = new ApiKey({ 
+      owner: trimmedOwner, 
+      key: trimmedKey, 
+      role 
+    });
+    
+    await newKeyDoc.save();
+    res.status(201).json(newKeyDoc);
+  } catch (err) { 
+    res.status(400).json({ error: "GLOBAL_VALIDATION_ERROR" }); 
+  }
 });
 
 router.delete('/:id', auth(['admin']), async (req, res) => {
   try {
-    const key = await ApiKey.findById(req.params.id);
-    if (key?.role === 'admin') return res.status(403).json({ error: "Adminų trinti negalima." });
+    const targetKey = await ApiKey.findById(req.params.id);
+    if (!targetKey) {
+      return res.status(404).json({ error: "GLOBAL_NOT_FOUND" });
+    }
+    
+    if (targetKey.role === 'admin') {
+      return res.status(403).json({ error: "KEY_DELETE_ADMIN_FORBIDDEN" });
+    }
+    
     await ApiKey.findByIdAndDelete(req.params.id);
-    res.json({ message: 'Ištrinta' });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+    res.json({ message: 'SUCCESS' });
+  } catch (err) { 
+    res.status(500).json({ error: "KEY_DELETE_ERROR" }); 
+  }
 });
 
 export default router;
