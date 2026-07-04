@@ -1,55 +1,51 @@
-import { useMemo } from 'react';
-import { useStore, TAG_PRIORITY } from '../store/useStore';
+import { useMemo, useState } from 'react';
+import { useStore } from '../store/useStore';
+import { TAG_PRIORITY } from "../config";
 import { ClientCard } from './ClientCard';
 import { MdViewModule } from 'react-icons/md';
+import { AnimatePresence } from 'framer-motion';
+import { StatusMessage } from './StatusMessage';
 
 export const CardList = () => {
-  // Pasiimame būsenas tiesiai iš Zustand – pasikeitus bet kuriai iš jų, React perbraižys sąrašą
   const clients = useStore((state) => state.clients);
   const showTrash = useStore((state) => state.showTrash);
   const filterType = useStore((state) => state.filterType);
 
+  // Globali pranešimų būsena visiems sąrašo veiksmams
+  const [status, setStatus] = useState({ type: '', msg: '' });
+
   const sortedClients = useMemo(() => {
-    // 1. Pirmiausia išfiltruojame klientus pagal abu filtrus
     const filtered = [...clients].filter(c => {
       const tag = c.tag?.toLowerCase();
 
-      // Filtro sąlyga 1: Jei pasirinkta rodyti tik neapdorotus
       if (filterType === 'unprocessed') {
         return tag === 'unprocessed';
       }
 
-      // Filtro sąlyga 2: Jei pasirinkta "Apdoroti", neapdorotų čia nerodome
       if (tag === 'unprocessed') {
         return false;
       }
 
-      // Filtro sąlyga 3: Senoji "Slėpti neaktualius" (showTrash) logika apdorotiems klientams
       if (!showTrash) {
-        return !['disapproved', 'archived client', 'pending'].includes(tag);
+        return !['disapproved', 'archived client'].includes(tag);
       }
 
       return true;
     });
 
-    // 2. TIKRIEJI DEBUG LOGAI KONSOLĖJE (F12)
-    console.log("=== CARDLIST FILTRAVIMAS ===");
-    console.log("Gauti klientai iš store:", clients.length);
-    console.log("Aktyvus puslapis (filterType):", filterType);
-    console.log("Rodyti visus neaktualius (showTrash):", showTrash);
-    console.log("Klientų skaičius po filtravimo:", filtered.length);
-    console.log("============================");
-
-    // 3. Rūšiuojame išfiltruotus klientus pagal prioritetą
     return filtered.sort((a, b) => {
-      const prioB = TAG_PRIORITY[b.tag] || 0;
-      const prioA = TAG_PRIORITY[a.tag] || 0;
+      const prioB = TAG_PRIORITY[b.tag] || TAG_PRIORITY[b.tag?.toLowerCase()] || 0;
+      const prioA = TAG_PRIORITY[a.tag] || TAG_PRIORITY[a.tag?.toLowerCase()] || 0;
       return prioB - prioA;
     });
   }, [clients, showTrash, filterType]);
 
+  const handleActionSuccess = (msg) => {
+    setStatus({ type: 'success', msg });
+  };
+
   return (
-    <div className="h-full flex flex-col bg-white dark:bg-[#292a2d] border border-[#dadce0] dark:border-[#3c4043] rounded shadow-sm overflow-hidden">
+    <div className="h-full flex flex-col bg-white dark:bg-[#292a2d] border border-[#dadce0] dark:border-[#3c4043] rounded shadow-sm overflow-hidden relative">
       <div className="p-6 border-b border-[#dadce0] dark:border-[#3c4043] flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
@@ -70,11 +66,26 @@ export const CardList = () => {
         ) : (
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 auto-rows-max">
             {sortedClients.map(client => (
-              <ClientCard key={client.id} client={client} />
+              <ClientCard 
+                key={client._id || client.id} 
+                client={client} 
+                onDeleteSuccess={handleActionSuccess}
+                onSaveSuccess={handleActionSuccess}
+              />
             ))}
           </div>
         )}
       </div>
+
+      <AnimatePresence>
+        {status.msg && (
+          <StatusMessage 
+            type={status.type} 
+            msg={status.msg} 
+            onClose={() => setStatus({ type: '', msg: '' })} 
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };

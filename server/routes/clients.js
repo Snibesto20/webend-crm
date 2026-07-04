@@ -4,10 +4,11 @@ import { auth } from '../middleware.js';
 
 const router = express.Router();
 
+// Papildytas ir sutvarkytas validžių žymių sąrašas (mažosiomis raidėmis dėl .toLowerCase())
 const VALID_TAGS = [
   'potential 1', 'potential 2', 'potential 3', 'potential 4', 'potential 5',
   'potential 6', 'potential 7', 'potential 8', 'potential 9', 'potential 10',
-  'pending', 'disapproved', 'unprocessed'
+  'pending', 'approved', 'active client', 'archived client', 'disapproved', 'unprocessed'
 ];
 
 router.get('/', auth(['admin', 'marketing']), async (req, res) => {
@@ -46,13 +47,14 @@ router.post('/', auth(['admin']), async (req, res) => {
       return res.status(400).json({ code: 'CLIENT_DUPLICATE_NAME', meta: { name: nameUpper } });
     }
 
-    const isGhosted = normalizedTag === 'disapproved';
+    // Atitinka frontendo "isGhosted" / "hideBody" taisykles duomenų valymui
+    const shouldHideService = ['disapproved', 'pending', 'archived client'].includes(normalizedTag);
 
     const cleanClientData = {
       name: nameUpper,
-      tag: normalizedTag,
+      tag: normalizedTag, // Čia išsisaugo mažosiomis raidėmis, kas užkerta kelią validacijos klaidoms
       contacts: filteredContacts,
-      serviceNeeded: isGhosted ? '' : (serviceNeeded ? String(serviceNeeded).trim().substring(0, 255) : ''),
+      serviceNeeded: shouldHideService ? '' : (serviceNeeded ? String(serviceNeeded).trim().substring(0, 255) : ''),
       notes: notes ? String(notes).trim().substring(0, 2000) : '',
       marketer: req.user?.owner || 'Nenurodyta'
     };
@@ -110,8 +112,9 @@ router.put('/:id', auth(['admin']), async (req, res) => {
       return res.status(400).json({ code: 'CLIENT_CONTACTS_REQUIRED_FOR_UNPROCESSED' });
     }
 
-    const isGhosted = targetTag === 'disapproved';
-    if (isGhosted) {
+    // Valome paslaugas jeigu statusas reikalauja jas paslėpti
+    const shouldHideService = ['disapproved', 'pending', 'archived client'].includes(targetTag);
+    if (shouldHideService) {
       updateData.serviceNeeded = '';
     } else if (serviceNeeded !== undefined) {
       updateData.serviceNeeded = String(serviceNeeded).trim().substring(0, 255);

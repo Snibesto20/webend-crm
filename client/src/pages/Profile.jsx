@@ -1,8 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useStore, TAG_PRIORITY } from '../store/useStore';
+import { useStore } from '../store/useStore';
 import { ProfileHeader } from '../components/headers/ProfileHeader';
 import { StatusMessage } from '../components/StatusMessage';
 import { ConfirmModal } from '../components/ConfirmModal';
+import { TAG_PRIORITY } from "../config"
 import { TagBadge } from '../components/TagBadge';
 import { ClientModal } from '../components/ClientModal';
 import { 
@@ -21,6 +22,7 @@ export const Profile = () => {
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, id: null, name: '' });
   const [isInputHovered, setIsInputHovered] = useState(false);
   const [isInputFocused, setIsInputFocused] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const filteredClients = useMemo(() => {
     const query = searchTerm.toLowerCase().trim();
@@ -38,7 +40,12 @@ export const Profile = () => {
     if (selectedClient) {
       const currentId = selectedClient._id || selectedClient.id;
       const freshData = clients.find(c => (c._id || c.id) === currentId);
-      if (freshData) setSelectedClient(freshData);
+      if (freshData) {
+        setSelectedClient(freshData);
+      } else {
+        // Jei klientas nebeegzistuoja bendrame sąraše (buvo ištrintas), uždarome modalą
+        setSelectedClient(null);
+      }
     }
   }, [clients, selectedClient]);
 
@@ -55,6 +62,31 @@ export const Profile = () => {
     if (newKey === apiKey) return setStatus({ type: 'error', msg: 'Raktas negali sutapti su dabartiniu raktu!' });
     const result = await updateOwnKey(newKey);
     setStatus(result.success ? { type: 'success', msg: 'Raktas sėkmingai atnaujintas!' } : { type: 'error', msg: result.error });
+  };
+
+  const handleDeleteClient = async () => {
+    if (!deleteModal.id || isDeleting) return;
+    
+    setIsDeleting(true);
+    const targetId = deleteModal.id;
+    
+    // Uždarome patvirtinimo langą iškart
+    setDeleteModal({ isOpen: false, id: null, name: '' });
+    
+    try {
+      await deleteClient(targetId);
+      
+      // Jei triname tą klientą, kuris dabar atidarytas detaliame lange – uždarome jį
+      if (selectedClient?._id === targetId || selectedClient?.id === targetId) {
+        setSelectedClient(null);
+      }
+      
+      setStatus({ type: 'success', msg: 'Klientas sėkmingai pašalintas iš registro.' });
+    } catch (err) {
+      setStatus({ type: 'error', msg: 'Nepavyko ištrinti kliento iš registro.' });
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const handleCancel = () => {
@@ -91,7 +123,8 @@ export const Profile = () => {
                 </div>
               </div>
             </div>
-            <div className="bg-white dark:bg-[#292a2d] border border-[#dadce0] dark:border-[#3c4043] rounded shadow-sm flex flex-col h-[400px]">
+            
+            <div className={`bg-white dark:bg-[#292a2d] border border-[#dadce0] dark:border-[#3c4043] rounded shadow-sm flex flex-col h-[400px] ${isDeleting ? "opacity-60 pointer-events-none" : ""}`}>
               <div className="p-6 border-b border-[#dadce0] dark:border-[#3c4043] flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded"><MdList size={24} className="text-[#1a73e8]" /></div>
@@ -133,6 +166,7 @@ export const Profile = () => {
               </div>
             </div>
           </div>
+          
           <div className="bg-white dark:bg-[#292a2d] border border-[#dadce0] dark:border-[#3c4043] rounded shadow-sm h-full flex flex-col">
             <div className="p-6 border-b border-[#dadce0] dark:border-[#3c4043] flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -154,7 +188,7 @@ export const Profile = () => {
                   {user?.role === 'admin' ? (
                     <div className="inline-flex items-center gap-1 text-[9px] font-black tracking-tighter text-red-600 bg-red-100 dark:bg-red-900/30 dark:text-red-400 px-1.5 py-0.5 rounded border border-red-200 dark:border-red-800/40"><MdSecurity size={10} /> Administratorius</div>
                   ) : (
-                    <div className="inline-flex items-center gap-1 text-[9px] font-black tracking-tighter text-blue-600 bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-800/40"><MdTrendingUp size={10} /> Marketingas</div>
+                    <div className="inline-flex items-center gap-1 text-[9px] font-black tracking-tighter text-blue-600 bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 px-1.5 py-0.5 rounded border border-blue-200 dark:border-red-800/40"><MdTrendingUp size={10} /> Marketingas</div>
                   )}
                 </div>
                 <div className="text-[12px] text-[#5f6368] dark:text-[#9aa0a6] mt-2">Rolė sistemoje</div>
@@ -167,7 +201,7 @@ export const Profile = () => {
       <ClientModal client={selectedClient} onClose={() => setSelectedClient(null)} onSave={handleSaveClient} />
 
       <ConfirmModal isOpen={isKeyModalOpen} title="Patvirtinti pakeitimus" message="Ar tikrai norite pakeisti savo prieigos raktą?" onConfirm={handleUpdate} onCancel={() => setIsKeyModalOpen(false)} />
-      <ConfirmModal isOpen={deleteModal.isOpen} title="Pašalinti iš registro?" message={<>Ar tikrai norite pašalinti <span className="font-bold text-[#202124] dark:text-[#e8eaed]">„{deleteModal.name}“</span>? <br /><span className="text-blue-600 text-[12px] font-medium">Dėmesio: bus ištrinta kliento kortelė ir visi jos duomenys.</span></>} onConfirm={async () => { if (deleteModal.id) { await deleteClient(deleteModal.id); if (selectedClient?._id === deleteModal.id || selectedClient?.id === deleteModal.id) setSelectedClient(null); } setDeleteModal({ isOpen: false, id: null, name: '' }); }} onCancel={() => setDeleteModal({ isOpen: false, id: null, name: '' })} />
+      <ConfirmModal isOpen={deleteModal.isOpen} title="Pašalinti iš registro?" message={<>Ar tikrai norite pašalinti <span className="font-bold text-[#202124] dark:text-[#e8eaed]">„{deleteModal.name}“</span>? <br /><span className="text-blue-600 text-[12px] font-medium">Dėmesio: bus ištrinta kliento kortelė ir visi jos duomenys.</span></>} onConfirm={handleDeleteClient} onCancel={() => setDeleteModal({ isOpen: false, id: null, name: '' })} />
 
       <AnimatePresence>
         {status.msg && <StatusMessage type={status.type} msg={status.msg} onClose={() => setStatus({ type: '', msg: '' })} />}

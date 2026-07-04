@@ -31,16 +31,16 @@ export const createClientSlice = (set, get) => ({
         body: JSON.stringify(dataWithMarketer)
       });
       
+      const resData = await res.json().catch(() => ({}));
+      
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        const error = new Error(errorData.code || 'UNKNOWN_ERROR');
-        error.meta = errorData.meta;
+        const error = new Error(resData.code || 'CLIENT_CREATE_ERROR');
+        error.meta = resData.meta;
         throw error;
       }
       
-      const newClient = await res.json();
-      set((state) => ({ clients: [...state.clients, newClient] }));
-      return newClient;
+      set((state) => ({ clients: [...state.clients, resData] }));
+      return resData;
     } catch (err) {
       console.error("Klaida pridedant klientą:", err);
       throw err;
@@ -55,17 +55,18 @@ export const createClientSlice = (set, get) => ({
         body: JSON.stringify(updatedData) 
       });
       
+      const resData = await res.json().catch(() => ({}));
+      
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        const error = new Error(errorData.code || 'UNKNOWN_ERROR');
-        error.meta = errorData.meta;
+        const error = new Error(resData.code || 'CLIENT_UPDATE_ERROR');
+        error.meta = resData.meta;
         throw error;
       }
       
-      const updatedClient = await res.json();
       set((state) => ({ 
-        clients: state.clients.map(c => c._id === id ? updatedClient : c) 
+        clients: state.clients.map(c => (c._id === id || c.id === id) ? resData : c) 
       }));
+      return resData;
     } catch (err) {
       console.error("Klaida atnaujinant klientą:", err);
       throw err;
@@ -81,10 +82,10 @@ export const createClientSlice = (set, get) => ({
       
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.code || 'UNKNOWN_ERROR');
+        throw new Error(errorData.code || 'CLIENT_DELETE_ERROR');
       }
       
-      set((state) => ({ clients: state.clients.filter(c => c._id !== id) }));
+      set((state) => ({ clients: state.clients.filter(c => c._id !== id && c.id !== id) }));
     } catch (err) {
       console.error("Klaida trinant klientą:", err);
       throw err;

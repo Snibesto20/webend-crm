@@ -1,24 +1,42 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
-import { getOptionColorClass, translateTag } from './TagBadge';
 import { AnimatePresence } from 'framer-motion';
 import { StatusMessage } from './StatusMessage';
-import { ERRORS } from '../config';
-import { MdPersonAdd, MdAdd, MdDelete, MdContactMail, MdPerson, MdBuild, MdMiscellaneousServices, MdBadge, MdNotes } from 'react-icons/md';
+import { ERRORS, INITIAL_TAGS, CLIENT_TAGS_CONFIG } from '../config';
+import { MdPersonAdd, MdAdd, MdDelete, MdContactMail, MdPerson, MdMiscellaneousServices, MdBadge, MdNotes } from 'react-icons/md';
 
-const INITIAL_TAGS = [
-  'potential 1', 'potential 2', 'potential 3', 'potential 4', 'potential 5', 
-  'potential 6', 'potential 7', 'potential 8', 'potential 9', 'potential 10', 
-  'pending', 'disapproved', 'unprocessed'
-];
+const formatPhoneNumber = (contactStr) => {
+  const trimmed = contactStr.trim();
+  if (!trimmed) return '';
+
+  const hasLetters = /[a-zA-ZąčęėįšųūžĄČĘĖĮŠŲŪŽ]/i.test(trimmed);
+  
+  if (hasLetters) {
+    return trimmed;
+  }
+
+  let cleaned = trimmed.replace(/\D/g, '');
+  if (!cleaned) return trimmed;
+
+  if (cleaned.startsWith('370')) {
+    cleaned = '0' + cleaned.substring(3);
+  } else if (cleaned.startsWith('8')) {
+    cleaned = '0' + cleaned.substring(1);
+  }
+
+  return cleaned;
+};
 
 export const ClientForm = () => {
   const addClient = useStore((state) => state.addClient);
   const user = useStore((state) => state.user);
+  const filterType = useStore((state) => state.filterType);
+
+  const getDefaultTag = () => filterType === 'unprocessed' ? 'unprocessed' : 'disapproved';
 
   const [formData, setFormData] = useState({ 
     name: '', 
-    tag: 'potential 1', 
+    tag: getDefaultTag(), 
     serviceNeeded: '', 
     notes: '',
     contacts: ['']
@@ -26,6 +44,13 @@ export const ClientForm = () => {
   
   const [status, setStatus] = useState({ type: '', msg: '' });
   const [issubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      tag: getDefaultTag()
+    }));
+  }, [filterType]);
 
   const isAdmin = user?.role === 'admin';
   const isDisapproved = formData.tag === 'disapproved';
@@ -68,8 +93,11 @@ export const ClientForm = () => {
       return;
     }
 
-    const filteredContacts = formData.contacts.map(c => c.trim()).filter(c => c !== '');
-    if (formData.tag === 'unprocessed' && filteredContacts.length === 0) {
+    const formattedContacts = formData.contacts
+      .map(c => formatPhoneNumber(c))
+      .filter(c => c.trim() !== '');
+
+    if (formData.tag === 'unprocessed' && formattedContacts.length === 0) {
       setStatus({ type: 'error', msg: ERRORS.CLIENT_CONTACTS_REQUIRED_FOR_UNPROCESSED });
       return;
     }
@@ -80,11 +108,18 @@ export const ClientForm = () => {
       await addClient({
         ...formData,
         name: trimmedName.toUpperCase(),
-        contacts: filteredContacts
+        contacts: formattedContacts
       });
       
       setStatus({ type: 'success', msg: 'Naujas klientas pridėtas sėkmingai!' });
-      setFormData({ name: '', tag: 'potential 1', serviceNeeded: '', notes: '', contacts: [''] });
+      
+      setFormData({ 
+        name: '', 
+        tag: getDefaultTag(), 
+        serviceNeeded: '', 
+        notes: '', 
+        contacts: [''] 
+      });
     } catch (err) {
       const backendCode = err.code || err.message;
       let errorMsg = ERRORS[backendCode] || ERRORS.GLOBAL_UNKNOWN_ERROR;
@@ -138,9 +173,7 @@ export const ClientForm = () => {
                     <input type="text" disabled={!isAdmin} value={contact} onChange={(e) => handleContactChange(index, e.target.value)} className={`${inputClass} h-[38px] pl-9`} />
                   </div>
                   {formData.contacts.length > 1 && (
-                    <button type="button" disabled={!isAdmin} onClick={() => removeContactField(index)} className={`${removeButtonClass} h-[38px] w-[38px]`}>
-                      <MdDelete size={16} />
-                    </button>
+                    <button type="button" disabled={!isAdmin} onClick={() => removeContactField(index)} className={`${removeButtonClass} h-[38px] w-[38px]`}><MdDelete size={16} /></button>
                   )}
                 </div>
               ))}
@@ -155,8 +188,8 @@ export const ClientForm = () => {
               <MdBadge size={14} className="text-[#1a73e8]" /> 
               <span>Kliento žymė <span className={asterisk}>*</span></span>
             </label>
-            <select disabled={!isAdmin} value={formData.tag} onChange={(e) => setFormData({ ...formData, tag: e.target.value })} className={`${inputClass} h-[38px] capitalize font-medium ${getOptionColorClass(formData.tag)}`}>
-              {INITIAL_TAGS.map(tag => <option key={tag} value={tag} className={getOptionColorClass(tag)}>{translateTag(tag)}</option>)}
+            <select disabled={!isAdmin} value={formData.tag} onChange={(e) => setFormData({ ...formData, tag: e.target.value })} className={`${inputClass} h-[38px] capitalize font-medium ${CLIENT_TAGS_CONFIG[formData.tag]?.colorClass || ''}`}>
+              {INITIAL_TAGS.map(tag => <option key={tag} value={tag} className={CLIENT_TAGS_CONFIG[tag]?.colorClass || ''}>{CLIENT_TAGS_CONFIG[tag]?.translation || ''}</option>)}
             </select>
           </div>
 
@@ -170,8 +203,8 @@ export const ClientForm = () => {
             <textarea rows="3" disabled={!isAdmin} value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} className={`${inputClass} resize-none`} />
           </div>
 
-          <button type="submit" disabled={issubmitting || !isAdmin} className={`w-full text-[13px] h-[38px] rounded transition-all shadow-sm active:scale-[0.98] font-bold ${issubmitting ? "opacity-50 cursor-wait" : ""} ${!isAdmin ? "bg-slate-300 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed shadow-none" : isDisapproved ? "bg-slate-600 hover:bg-slate-700 text-white" : "bg-[#1a73e8] hover:bg-[#1557b0] text-white"}`}>
-            {issubmitting ? "Vykdoma..." : isDisapproved ? "Pridėti į juodąjį sąrašą" : "Išsaugoti kontaktą"}
+          <button type="submit" disabled={issubmitting || !isAdmin} className={`w-full text-[13px] h-[38px] rounded transition-all shadow-sm active:scale-[0.98] font-bold ${issubmitting ? "opacity-50 cursor-wait" : ""} ${!isAdmin ? "bg-slate-300 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed shadow-none" : "bg-[#1a73e8] hover:bg-[#1557b0] text-white"}`}>
+            {issubmitting ? "Vykdoma..." : "Išsaugoti kontaktą"}
           </button>
         </form>
       </div>
