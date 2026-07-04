@@ -61,6 +61,9 @@ router.post('/', auth(['admin']), async (req, res) => {
     await newClient.save();
     res.status(201).json(newClient);
   } catch (err) { 
+    if (err.code === 'CLIENT_NAME_REQUIRED' || err.code === 'CLIENT_TAG_REQUIRED' || err.code === 'CLIENT_CONTACTS_REQUIRED_FOR_UNPROCESSED' || err.code === 'CLIENT_DUPLICATE_NAME') {
+      return res.status(400).json({ code: err.code, meta: err.meta });
+    }
     if (err.name === 'ValidationError') {
       return res.status(400).json({ code: 'GLOBAL_VALIDATION_ERROR' });
     }
@@ -126,6 +129,9 @@ router.put('/:id', auth(['admin']), async (req, res) => {
     
     res.json(updated);
   } catch (err) { 
+    if (err.code === 'CLIENT_NAME_REQUIRED' || err.code === 'CLIENT_TAG_REQUIRED' || err.code === 'CLIENT_CONTACTS_REQUIRED_FOR_UNPROCESSED' || err.code === 'CLIENT_DUPLICATE_NAME') {
+      return res.status(400).json({ code: err.code, meta: err.meta });
+    }
     res.status(400).json({ code: 'CLIENT_UPDATE_ERROR' }); 
   }
 });

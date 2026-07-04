@@ -86,11 +86,12 @@ export const ClientForm = () => {
       setStatus({ type: 'success', msg: 'Naujas klientas pridėtas sėkmingai!' });
       setFormData({ name: '', tag: 'potential 1', serviceNeeded: '', notes: '', contacts: [''] });
     } catch (err) {
-      const backendCode = err.message;
+      const backendCode = err.code || err.message;
       let errorMsg = ERRORS[backendCode] || ERRORS.GLOBAL_UNKNOWN_ERROR;
       
-      if (backendCode === 'CLIENT_DUPLICATE_NAME' && err.meta?.name) {
-        errorMsg = `Klaida: Klientas "${err.meta.name}" jau egzistuoja sistemoje.`;
+      if (backendCode === 'CLIENT_DUPLICATE_NAME' && (err.meta?.name || err.response?.data?.meta?.name)) {
+        const nameVal = err.meta?.name || err.response?.data?.meta?.name;
+        errorMsg = `Klaida: Klientas "${nameVal}" jau egzistuoja sistemoje.`;
       }
 
       setStatus({ type: 'error', msg: errorMsg });

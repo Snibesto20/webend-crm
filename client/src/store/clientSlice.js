@@ -64,7 +64,7 @@ export const createClientSlice = (set, get) => ({
       
       const updatedClient = await res.json();
       set((state) => ({ 
-        clients: state.clients.map(c => c.id === id ? updatedClient : c) 
+        clients: state.clients.map(c => c._id === id ? updatedClient : c) 
       }));
     } catch (err) {
       console.error("Klaida atnaujinant klientą:", err);
@@ -84,7 +84,7 @@ export const createClientSlice = (set, get) => ({
         throw new Error(errorData.code || 'UNKNOWN_ERROR');
       }
       
-      set((state) => ({ clients: state.clients.filter(c => c.id !== id) }));
+      set((state) => ({ clients: state.clients.filter(c => c._id !== id) }));
     } catch (err) {
       console.error("Klaida trinant klientą:", err);
       throw err;
