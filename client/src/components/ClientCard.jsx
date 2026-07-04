@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
-import { TagBadge, getOptionColorClass, translateTag } from './TagBadge';
+import { TagBadge } from './TagBadge';
 import { ConfirmModal } from './ConfirmModal';
 import { AnimatePresence } from 'framer-motion';
 import { StatusMessage } from './StatusMessage';
-import { ERRORS } from '../config';
+import { ERRORS, CLIENT_TAGS_CONFIG } from '../config';
 import { 
   MdEdit, 
   MdDelete, 
@@ -16,7 +16,8 @@ import {
   MdPerson,
   MdContactMail,
   MdAdd,
-  MdBadge
+  MdBadge,
+  MdCalendarToday
 } from 'react-icons/md';
 
 const ALL_TAGS = [
@@ -29,17 +30,9 @@ const formatPhoneNumber = (contactStr) => {
   const trimmed = contactStr.trim();
   if (!trimmed) return '';
 
-  console.log("=== formatPhoneNumber paleistas ===");
-  console.log("Gauta reikšmė:", trimmed);
-
   const hasLetters = /[a-zA-ZąčęėįšųūžĄČĘĖĮŠŲŪŽ]/i.test(trimmed);
-  
-  if (hasLetters) {
-    console.log("-> Rasta raidžių. Tai el. paštas arba nuoroda. Paliekame nepakeistą.");
-    return trimmed;
-  }
+  if (hasLetters) return trimmed;
 
-  console.log("-> Raidžių nerasta. Apdorojame kaip telefono numerį...");
   let cleaned = trimmed.replace(/\D/g, '');
   if (!cleaned) return trimmed;
 
@@ -48,12 +41,22 @@ const formatPhoneNumber = (contactStr) => {
   } else if (cleaned.startsWith('8')) {
     cleaned = '0' + cleaned.substring(1);
   }
-  
-  console.log("-> Suformatuotas telefonas:", cleaned);
   return cleaned;
 };
 
-export const ClientCard = ({ client, onDeleteSuccess }) => {
+const getContactLinkProps = (contactStr) => {
+  const trimmed = contactStr.trim();
+  if (/^\d+$/.test(trimmed)) return { href: `tel:${trimmed}`, isLink: true };
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (emailRegex.test(trimmed)) return { href: `mailto:${trimmed}`, isLink: true };
+  if (/^(https?:\/\/|www\.)/i.test(trimmed)) {
+    const href = /^www\./i.test(trimmed) ? `https://${trimmed}` : trimmed;
+    return { href, isLink: true, target: "_blank", rel: "noopener noreferrer" };
+  }
+  return { isLink: false };
+};
+
+export const ClientCard = ({ client, onDeleteSuccess, onSaveSuccess }) => {
   const { updateClient, deleteClient } = useStore();
   const user = useStore((state) => state.user);
   
@@ -63,25 +66,54 @@ export const ClientCard = ({ client, onDeleteSuccess }) => {
   const [status, setStatus] = useState({ type: '', msg: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  useEffect(() => {
+    setEditData({ ...client, contacts: client.contacts || [''] });
+  }, [client]);
+
   const isAdmin = user?.role === 'admin';
   const clientId = client?._id || client?.id;
+
+  const formattedCreationDate = client.createdAt 
+    ? new Date(client.createdAt).toLocaleDateString('lt-LT', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      })
+    : 'Data nežinoma';
 
   const handleSave = async () => {
     if (!isAdmin || !clientId) return;
     setStatus({ type: '', msg: '' });
-    setIsSubmitting(true);
 
-    const filteredContacts = (editData.contacts || [])
+    const filteredEditContacts = (editData.contacts || [])
       .map(c => formatPhoneNumber(c))
       .filter(c => c.trim() !== '');
+
+    const currentName = (editData.name || '').trim();
+    const currentService = (editData.serviceNeeded || '').trim();
+    const currentNotes = (editData.notes || '').trim();
+    const currentMoney = Number(editData.moneyMade || 0);
+
+    setIsSubmitting(true);
     
     try {
       await updateClient(clientId, {
         ...editData,
-        contacts: filteredContacts
+        name: currentName,
+        serviceNeeded: currentService,
+        notes: currentNotes,
+        moneyMade: currentMoney,
+        contacts: filteredEditContacts
       });
+      
+      const successMsg = ERRORS.CLIENT_UPDATE_SUCCESS || 'Kliento duomenys sėkmingai atnaujinti.';
       setIsEditing(false);
-      setStatus({ type: 'success', msg: ERRORS.CLIENT_UPDATE_SUCCESS });
+
+      if (onSaveSuccess) {
+        onSaveSuccess(successMsg);
+      } else {
+        setStatus({ type: 'success', msg: successMsg });
+      }
     } catch (err) {
       const backendCode = err.message;
       let errorMsg = ERRORS[backendCode] || ERRORS.GLOBAL_UNKNOWN_ERROR || 'Nepavyko atnaujinti kliento duomenų.';
@@ -101,7 +133,7 @@ export const ClientCard = ({ client, onDeleteSuccess }) => {
     
     try {
       await deleteClient(clientId);
-      const successMsg = ERRORS.CLIENT_DELETE_SUCCESS;
+      const successMsg = ERRORS.CLIENT_DELETE_SUCCESS || 'Klientas sėkmingai ištrintas.';
       
       if (onDeleteSuccess) {
         onDeleteSuccess(successMsg);
@@ -129,8 +161,6 @@ export const ClientCard = ({ client, onDeleteSuccess }) => {
     const newContacts = (editData.contacts || []).filter((_, i) => i !== index);
     setEditData({ ...editData, contacts: newContacts.length ? newContacts : [''] });
   };
-
-  console.log("e");
   
   const isDisapproved = client.tag === 'disapproved';
   const isPending = client.tag === 'pending';
@@ -138,8 +168,6 @@ export const ClientCard = ({ client, onDeleteSuccess }) => {
   const isActive = client.tag === 'active client';
 
   const isGhosted = (isDisapproved || isArchived) && !isEditing;
-  const useAbsoluteMarketer = isDisapproved || isPending;
-  
   const hideBody = isDisapproved || isPending;
   const showMoney = (isActive || isArchived);
 
@@ -150,12 +178,7 @@ export const ClientCard = ({ client, onDeleteSuccess }) => {
   return (
     <>
       <div className={`relative bg-white dark:bg-[#292a2d] rounded border transition-all duration-300 p-4 shadow-sm group ${isGhosted ? "border-slate-200 dark:border-slate-800 opacity-60 bg-slate-50/50 dark:bg-slate-900/10" : "border-[#dadce0] dark:border-[#3c4043]"} ${isSubmitting ? "opacity-50 pointer-events-none" : ""}`}>
-        {useAbsoluteMarketer && !isEditing && (
-          <div className="absolute bottom-2 right-2 flex items-center gap-1 text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-800/50 px-1.5 py-0.5 rounded opacity-70 text-right">
-            <MdPerson size={10} /> {client.marketer || 'Nenurodytas'}
-          </div>
-        )}
-
+        
         {isEditing && isAdmin ? (
           <div className="space-y-4 animate-in fade-in duration-300">
             <div className="space-y-1.5">
@@ -185,9 +208,9 @@ export const ClientCard = ({ client, onDeleteSuccess }) => {
 
             <div className="space-y-1.5">
               <label className={labelClass}><MdBadge size={14} className="text-[#1a73e8]" /> Kliento žymė</label>
-              <select className={`${inputClass} h-[38px] capitalize ${getOptionColorClass(editData.tag)}`} value={editData.tag} onChange={(e) => setEditData({...editData, tag: e.target.value})}>
+              <select className={`${inputClass} h-[38px] capitalize ${CLIENT_TAGS_CONFIG[editData.tag]?.colorClass || ''}`} value={editData.tag} onChange={(e) => setEditData({...editData, tag: e.target.value})}>
                 {ALL_TAGS.map(t => (
-                  <option key={t} value={t} className={getOptionColorClass(t)}>{translateTag(t)}</option>
+                  <option key={t} value={t} className={CLIENT_TAGS_CONFIG[t]?.colorClass || ''}>{CLIENT_TAGS_CONFIG[t]?.translation || ''}</option>
                 ))}
               </select>
             </div>
@@ -251,21 +274,30 @@ export const ClientCard = ({ client, onDeleteSuccess }) => {
                       {client.serviceNeeded || "Paslauga nenurodyta"}
                     </span>
                   </div>
-                  {!useAbsoluteMarketer && (
-                    <div className="flex items-center gap-1 text-[11px] text-slate-500 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded shrink-0 text-right">
-                      <MdPerson size={12} /> {client.marketer || 'Nenurodytas'}
-                    </div>
-                  )}
                 </div>
 
                 {client.contacts && client.contacts.length > 0 ? (
                   <div className="flex flex-wrap gap-1 mt-2 min-h-[24px]">
-                    {client.contacts.map((contact, idx) => (
-                      <div key={idx} className="flex items-center gap-1.5 px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded border border-blue-100 dark:border-blue-800/30 text-[11px]">
-                        <MdContactMail size={12} className="shrink-0" />
-                        <span className="truncate max-w-[150px]">{contact}</span>
-                      </div>
-                    ))}
+                    {client.contacts.map((contact, idx) => {
+                      const linkProps = getContactLinkProps(contact);
+                      const baseBadgeClass = "flex items-center gap-1.5 px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded border border-blue-100 dark:border-blue-800/30 text-[11px] transition-colors max-w-[150px]";
+                      
+                      if (linkProps.isLink) {
+                        return (
+                          <a key={idx} href={linkProps.href} target={linkProps.target} rel={linkProps.rel} className={`${baseBadgeClass} hover:bg-blue-100 dark:hover:bg-blue-900/40 cursor-pointer`}>
+                            <MdContactMail size={12} className="shrink-0" />
+                            <span className="truncate">{contact}</span>
+                          </a>
+                        );
+                      }
+
+                      return (
+                        <div key={idx} className={`${baseBadgeClass} cursor-default`}>
+                          <MdContactMail size={12} className="shrink-0" />
+                          <span className="truncate">{contact}</span>
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="mt-2 h-[24px]" />
@@ -277,6 +309,28 @@ export const ClientCard = ({ client, onDeleteSuccess }) => {
                     {client.notes || <span className="italic opacity-50">Nėra papildomų pastabų.</span>}
                   </p>
                 </div>
+
+                <div className="flex items-center justify-between pt-1 text-[11px] text-slate-400 dark:text-slate-500">
+                  <div className="flex items-center gap-1 text-[11px] text-slate-500 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded shrink-0">
+                    <MdPerson size={12} /> {client.marketer || 'Nenurodytas'}
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0 pl-2">
+                    <MdCalendarToday size={12} className="text-slate-400/80" />
+                    <span>{formattedCreationDate}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {hideBody && (
+              <div className="flex items-center justify-between pt-1 text-[11px] text-slate-400 dark:text-slate-500">
+                <div className="flex items-center gap-1 text-[11px] text-slate-500 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded shrink-0">
+                  <MdPerson size={12} /> {client.marketer || 'Nenurodytas'}
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <MdCalendarToday size={12} />
+                  <span>{formattedCreationDate}</span>
+                </div>
               </div>
             )}
           </>
@@ -286,7 +340,7 @@ export const ClientCard = ({ client, onDeleteSuccess }) => {
       <ConfirmModal isOpen={isDeleteModalOpen} title="Ištrinti klientą?" message={<>Ar tikrai norite visam laikui ištrinti klientą <span className="font-bold text-[#202124] dark:text-[#e8eaed]">„{client.name}“</span>?</>} onConfirm={handleDelete} onCancel={() => setIsDeleteModalOpen(false)} />
 
       <AnimatePresence>
-        {!onDeleteSuccess && status.msg && (
+        {status.msg && (
           <StatusMessage type={status.type} msg={status.msg} onClose={() => setStatus({ type: '', msg: '' })} />
         )}
       </AnimatePresence>

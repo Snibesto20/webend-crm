@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import { useStore, TAG_PRIORITY } from '../store/useStore';
+import { useStore } from '../store/useStore';
 import { ApiKeyHeader } from '../components/headers/ApiKeyHeader';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { TagBadge } from '../components/TagBadge';
 import { StatusMessage } from "../components/StatusMessage";
-import { ERRORS, VALIDATION_CONFIG } from '../config';
+import { ERRORS, VALIDATION_CONFIG, TAG_PRIORITY } from '../config';
 import { 
   MdDelete, MdVpnKey, MdPerson, MdShield, 
   MdSecurity, MdTrendingUp, MdClose, 

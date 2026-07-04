@@ -1,8 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useStore, TAG_PRIORITY } from '../store/useStore';
+import { useStore } from '../store/useStore';
 import { ProfileHeader } from '../components/headers/ProfileHeader';
 import { StatusMessage } from '../components/StatusMessage';
 import { ConfirmModal } from '../components/ConfirmModal';
+import { TAG_PRIORITY } from "../config"
 import { TagBadge } from '../components/TagBadge';
 import { ClientModal } from '../components/ClientModal';
 import { 

@@ -6,19 +6,29 @@ import { StatusMessage } from './StatusMessage';
 
 export const ClientModal = ({ client, onClose, onSave }) => {
   const [modalStatus, setModalStatus] = useState({ type: '', msg: '' });
+  const [isActionDone, setIsActionDone] = useState(false);
 
   if (!client && !modalStatus.msg) return null;
 
   const handleDeleteSuccess = (message) => {
-    // 1. Nustatome pranešimą tėviniame lygyje, kad jis neišsijungtų su modalu
     setModalStatus({ type: 'success', msg: message });
-    // 2. Uždarome patį modalą
+    setIsActionDone(true);
+  };
+
+  const handleSaveSuccess = (message) => {
+    setModalStatus({ type: 'success', msg: message });
+    setIsActionDone(true);
+  };
+
+  const handleCloseStatus = () => {
+    setModalStatus({ type: '', msg: '' });
     onClose();
+    setIsActionDone(false);
   };
 
   return (
     <>
-      {client && (
+      {client && !isActionDone && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white dark:bg-[#292a2d] w-full max-w-lg rounded-lg shadow-xl overflow-hidden flex flex-col border border-gray-100 dark:border-gray-700">
             <div className="p-6 bg-white dark:bg-[#292a2d] border-b border-[#dadce0] dark:border-[#3c4043] flex justify-between items-center shrink-0">
@@ -28,12 +38,10 @@ export const ClientModal = ({ client, onClose, onSave }) => {
                 </div>
                 <h2 className="text-[16px] font-medium text-[#202124] dark:text-[#e8eaed]">Kliento informacija</h2>
               </div>
-              <button onClick={onClose} className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors">
-                <MdClose size={20} />
-              </button>
+              <button onClick={onClose} className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"><MdClose size={20} /></button>
             </div>
             <div className="p-5 overflow-y-auto custom-scrollbar max-h-[80vh] bg-[#f8f9fa]/30 dark:bg-[#202124]/10">
-              <ClientCard client={client} onSave={onSave} onDeleteSuccess={handleDeleteSuccess} />
+              <ClientCard client={client} onSave={onSave} onDeleteSuccess={handleDeleteSuccess} onSaveSuccess={handleSaveSuccess} />
             </div>
           </div>
         </div>
@@ -41,7 +49,7 @@ export const ClientModal = ({ client, onClose, onSave }) => {
 
       <AnimatePresence>
         {modalStatus.msg && (
-          <StatusMessage type={modalStatus.type} msg={modalStatus.msg} onClose={() => setModalStatus({ type: '', msg: '' })} />
+          <StatusMessage type={modalStatus.type} msg={modalStatus.msg} onClose={handleCloseStatus} />
         )}
       </AnimatePresence>
     </>
