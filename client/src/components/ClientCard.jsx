@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { useStore } from '../store/useStore';
 import { TagBadge, getOptionColorClass, translateTag } from './TagBadge';
 import { ConfirmModal } from './ConfirmModal';
+import { AnimatePresence } from 'framer-motion';
+import { StatusMessage } from './StatusMessage';
+import { ERRORS } from '../config';
 import { 
   MdEdit, 
   MdDelete, 
@@ -16,30 +19,87 @@ import {
   MdBadge
 } from 'react-icons/md';
 
+// Tiksli išplėstinė žymių seka: potencialas 1-10, patvirtinta (laukia), aktyvus klientas, archyvuotas klientas, atmesta, neapdorota
 const ALL_TAGS = [
-  'pending', 'potential 1', 'potential 2', 'potential 3', 'potential 4', 'potential 5', 
+  'potential 1', 'potential 2', 'potential 3', 'potential 4', 'potential 5', 
   'potential 6', 'potential 7', 'potential 8', 'potential 9', 'potential 10', 
-  'approved', 'Active Client', 'disapproved', 'Archived Client'
+  'pending', 'approved', 'Active Client', 'Archived Client', 'disapproved', 'unprocessed'
 ];
 
-export const ClientCard = ({ client }) => {
+// Pagalbinė funkcija telefono numerio formatavimui išvalyti
+const formatPhoneNumber = (contactStr) => {
+  let cleaned = contactStr.replace(/\D/g, '');
+  if (!cleaned) return '';
+  if (cleaned.startsWith('370')) {
+    cleaned = '0' + cleaned.substring(3);
+  } else if (cleaned.startsWith('8')) {
+    cleaned = '0' + cleaned.substring(1);
+  }
+  return cleaned;
+};
+
+export const ClientCard = ({ client, onDeleteSuccess }) => {
   const { updateClient, deleteClient } = useStore();
   const user = useStore((state) => state.user);
+  
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({ ...client, contacts: client.contacts || [''] });
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [status, setStatus] = useState({ type: '', msg: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isAdmin = user?.role === 'admin';
+  const clientId = client?._id || client?.id;
 
   const handleSave = async () => {
-    if (!isAdmin) return;
-    const filteredContacts = (editData.contacts || []).map(c => c.trim()).filter(c => c !== '');
+    if (!isAdmin || !clientId) return;
+    setStatus({ type: '', msg: '' });
+    setIsSubmitting(true);
+
+    // Filtruojame tuščius ir automatiškai išvalome kontaktų telefono numerius
+    const filteredContacts = (editData.contacts || [])
+      .map(c => c.trim())
+      .filter(c => c !== '')
+      .map(c => formatPhoneNumber(c));
     
-    await updateClient(client.id, {
-      ...editData,
-      contacts: filteredContacts.length ? filteredContacts : []
-    });
-    setIsEditing(false);
+    try {
+      await updateClient(clientId, {
+        ...editData,
+        contacts: filteredContacts
+      });
+      setIsEditing(false);
+      setStatus({ type: 'success', msg: 'Kliento duomenys sėkmingai atnaujinti!' });
+    } catch (err) {
+      const backendCode = err.message;
+      let errorMsg = ERRORS[backendCode] || ERRORS.GLOBAL_UNKNOWN_ERROR || 'Nepavyko atnaujinti kliento duomenų.';
+      if (backendCode === 'CLIENT_DUPLICATE_NAME' && err.meta?.name) {
+        errorMsg = `Klaida: Klientas "${err.meta.name}" jau egzistuoja sistemoje.`;
+      }
+      setStatus({ type: 'error', msg: errorMsg });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!clientId) return;
+    setStatus({ type: '', msg: '' });
+    setIsDeleteModalOpen(false);
+    
+    try {
+      await deleteClient(clientId);
+      const successMsg = 'Klientas sėkmingai pašalintas iš sistemos.';
+      
+      if (onDeleteSuccess) {
+        onDeleteSuccess(successMsg);
+      } else {
+        setStatus({ type: 'success', msg: successMsg });
+      }
+    } catch (err) {
+      const backendCode = err.message;
+      const errorMsg = ERRORS[backendCode] || ERRORS.CLIENT_DELETE_ERROR || ERRORS.GLOBAL_UNKNOWN_ERROR;
+      setStatus({ type: 'error', msg: errorMsg });
+    }
   };
 
   const handleContactChange = (index, value) => {
@@ -62,7 +122,8 @@ export const ClientCard = ({ client }) => {
   const isArchived = client.tag === 'Archived Client';
   const isActive = client.tag === 'Active Client';
 
-  const isGhosted = (isDisapproved || isPending || isArchived) && !isEditing;
+  // Pakeista: iš ghosted išimta 'isPending' būsena
+  const isGhosted = (isDisapproved || isArchived) && !isEditing;
   const useAbsoluteMarketer = isDisapproved || isPending;
   
   const hideBody = isDisapproved || isPending;
@@ -74,7 +135,7 @@ export const ClientCard = ({ client }) => {
 
   return (
     <>
-      <div className={`relative bg-white dark:bg-[#292a2d] rounded border transition-all duration-300 p-4 shadow-sm group ${isGhosted ? "border-slate-200 dark:border-slate-800 opacity-60 bg-slate-50/50 dark:bg-slate-900/10" : "border-[#dadce0] dark:border-[#3c4043]"}`}>
+      <div className={`relative bg-white dark:bg-[#292a2d] rounded border transition-all duration-300 p-4 shadow-sm group ${isGhosted ? "border-slate-200 dark:border-slate-800 opacity-60 bg-slate-50/50 dark:bg-slate-900/10" : "border-[#dadce0] dark:border-[#3c4043]"} ${isSubmitting ? "opacity-50 pointer-events-none" : ""}`}>
         {useAbsoluteMarketer && !isEditing && (
           <div className="absolute bottom-2 right-2 flex items-center gap-1 text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-800/50 px-1.5 py-0.5 rounded opacity-70">
             <MdPerson size={10} /> {client.marketer || 'Nenurodytas'}
@@ -110,7 +171,7 @@ export const ClientCard = ({ client }) => {
 
             <div className="space-y-1.5">
               <label className={labelClass}><MdBadge size={14} className="text-[#1a73e8]" /> Kliento žymė</label>
-              <select className={`${inputClass} h-[38px] capitalize font-medium ${getOptionColorClass(editData.tag)}`} value={editData.tag} onChange={(e) => setEditData({...editData, tag: e.target.value})}>
+              <select className={`${inputClass} h-[38px] capitalize ${getOptionColorClass(editData.tag)}`} value={editData.tag} onChange={(e) => setEditData({...editData, tag: e.target.value})}>
                 {ALL_TAGS.map(t => (
                   <option key={t} value={t} className={getOptionColorClass(t)}>{translateTag(t)}</option>
                 ))}
@@ -138,7 +199,7 @@ export const ClientCard = ({ client }) => {
             </div>
 
             <div className="flex gap-2 justify-end pt-2">
-              <button onClick={() => { setIsEditing(false); setEditData({...client, contacts: client.contacts || ['']}); }} className="p-1.5 rounded text-[#5f6368] dark:text-[#9aa0a6] hover:bg-[#f1f3f4] dark:hover:bg-[#3c4043] transition-colors"><MdClose size={16} /></button>
+              <button onClick={() => { setIsEditing(false); setEditData({...client, contacts: client.contacts || ['']}); setStatus({ type: '', msg: '' }); }} className="p-1.5 rounded text-[#5f6368] dark:text-[#9aa0a6] hover:bg-[#f1f3f4] dark:hover:bg-[#3c4043] transition-colors"><MdClose size={16} /></button>
               <button onClick={handleSave} className="p-1.5 rounded text-white bg-[#1a73e8] hover:bg-[#1557b0] transition-colors shadow-sm"><MdCheck size={16} /></button>
             </div>
           </div>
@@ -208,7 +269,13 @@ export const ClientCard = ({ client }) => {
         )}
       </div>
 
-      <ConfirmModal isOpen={isDeleteModalOpen} title="Ištrinti klientą?" message={<>Ar tikrai norite visam laikui ištrinti klientą <span className="font-bold text-[#202124] dark:text-[#e8eaed]">„{client.name}“</span>?</>} onConfirm={() => { deleteClient(client.id); setIsDeleteModalOpen(false); }} onCancel={() => setIsDeleteModalOpen(false)} />
+      <ConfirmModal isOpen={isDeleteModalOpen} title="Ištrinti klientą?" message={<>Ar tikrai norite visam laikui ištrinti klientą <span className="font-bold text-[#202124] dark:text-[#e8eaed]">„{client.name}“</span>?</>} onConfirm={handleDelete} onCancel={() => setIsDeleteModalOpen(false)} />
+
+      <AnimatePresence>
+        {!onDeleteSuccess && status.msg && (
+          <StatusMessage type={status.type} msg={status.msg} onClose={() => setStatus({ type: '', msg: '' })} />
+        )}
+      </AnimatePresence>
     </>
   );
 };

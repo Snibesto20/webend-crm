@@ -16,6 +16,7 @@ export const ERRORS = {
   CLIENT_CREATE_ERROR: "Nepavyko sukurti kliento paskyros.",
   CLIENT_UPDATE_ERROR: "Nepavyko atnaujinti kliento duomenų.",
   CLIENT_DELETE_ERROR: "Nepavyko ištrinti kliento iš sistemos.",
+  CLIENT_DELETE_SUCCESS: "Kliento paskyra sėkmingai pašalinta iš sistemos.",
 
   KEY_OWNER_REQUIRED: "Savininkas yra privalomas.",
   KEY_TOO_SHORT: "API raktas privalo būti ne trumpesnis nei 5 simboliai.",

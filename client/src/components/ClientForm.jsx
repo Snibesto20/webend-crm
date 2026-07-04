@@ -12,6 +12,25 @@ const INITIAL_TAGS = [
   'pending', 'disapproved', 'unprocessed'
 ];
 
+// Pagalbinė funkcija telefono numerio formatavimui išvalyti
+const formatPhoneNumber = (contactStr) => {
+  // 1. Pašaliname viską, kas nėra skaičius (skliausteliai, brūkšniai, tarpai, pliusai ir t.t.)
+  let cleaned = contactStr.replace(/\D/g, '');
+
+  if (!cleaned) return '';
+
+  // 2. Jei prasideda 370, keičiame į 0
+  if (cleaned.startsWith('370')) {
+    cleaned = '0' + cleaned.substring(3);
+  }
+  // 3. Jei prasideda 8, keičiame į 0
+  else if (cleaned.startsWith('8')) {
+    cleaned = '0' + cleaned.substring(1);
+  }
+
+  return cleaned;
+};
+
 export const ClientForm = () => {
   const addClient = useStore((state) => state.addClient);
   const user = useStore((state) => state.user);
@@ -68,8 +87,13 @@ export const ClientForm = () => {
       return;
     }
 
-    const filteredContacts = formData.contacts.map(c => c.trim()).filter(c => c !== '');
-    if (formData.tag === 'unprocessed' && filteredContacts.length === 0) {
+    // Filtruojame tuščius įrašus ir kiekvienam pritaikome telefono numerio formatavimą
+    const formattedContacts = formData.contacts
+      .map(c => c.trim())
+      .filter(c => c !== '')
+      .map(c => formatPhoneNumber(c));
+
+    if (formData.tag === 'unprocessed' && formattedContacts.length === 0) {
       setStatus({ type: 'error', msg: ERRORS.CLIENT_CONTACTS_REQUIRED_FOR_UNPROCESSED });
       return;
     }
@@ -80,7 +104,7 @@ export const ClientForm = () => {
       await addClient({
         ...formData,
         name: trimmedName.toUpperCase(),
-        contacts: filteredContacts
+        contacts: formattedContacts
       });
       
       setStatus({ type: 'success', msg: 'Naujas klientas pridėtas sėkmingai!' });

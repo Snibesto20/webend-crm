@@ -3,6 +3,9 @@ import { useStore } from '../store/useStore';
 import { MdSearch, MdPeople } from 'react-icons/md';
 import { ConfirmModal } from './ConfirmModal';
 import { ClientModal } from './ClientModal';
+import { AnimatePresence } from 'framer-motion';
+import { StatusMessage } from './StatusMessage';
+import { ERRORS } from '../config';
 
 export const ClientRegistry = ({ onSelect }) => {
   const clients = useStore((state) => state.clients);
@@ -12,6 +15,7 @@ export const ClientRegistry = ({ onSelect }) => {
   const [search, setSearch] = useState('');
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, id: null, name: '' });
   const [selectedClient, setSelectedClient] = useState(null);
+  const [status, setStatus] = useState({ type: '', msg: '' });
 
   const searchQuery = search.toUpperCase().trim();
 
@@ -34,8 +38,38 @@ export const ClientRegistry = ({ onSelect }) => {
   const handleSaveClient = async (updatedData) => {
     if (updateClient && selectedClient) {
       const clientId = selectedClient._id || selectedClient.id;
-      await updateClient(clientId, updatedData);
-      setSelectedClient(prevState => ({ ...prevState, ...updatedData }));
+      try {
+        setStatus({ type: '', msg: '' });
+        await updateClient(clientId, updatedData);
+        setSelectedClient(prevState => ({ ...prevState, ...updatedData }));
+        setStatus({ type: 'success', msg: 'Kliento duomenys sėkmingai atnaujinti!' });
+      } catch (err) {
+        const backendCode = err.message;
+        const errorMsg = ERRORS[backendCode] || ERRORS.GLOBAL_UNKNOWN_ERROR || 'Nepavyko atnaujinti kliento duomenų.';
+        setStatus({ type: 'error', msg: errorMsg });
+      }
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    const targetId = deleteModal.id;
+    setStatus({ type: '', msg: '' });
+    setDeleteModal({ isOpen: false, id: null, name: '' });
+
+    if (!targetId) return;
+
+    try {
+      await deleteClient(targetId);
+      
+      if ((selectedClient?._id === targetId) || (selectedClient?.id === targetId)) {
+        setSelectedClient(null);
+      }
+      
+      setStatus({ type: 'success', msg: ERRORS.CLIENT_DELETE_SUCCESS });
+    } catch (err) {
+      const backendCode = err.message;
+      const errorMsg = ERRORS[backendCode] || ERRORS.CLIENT_DELETE_ERROR || ERRORS.GLOBAL_UNKNOWN_ERROR;
+      setStatus({ type: 'error', msg: errorMsg });
     }
   };
 
@@ -74,7 +108,11 @@ export const ClientRegistry = ({ onSelect }) => {
 
       <ClientModal client={selectedClient} onClose={() => setSelectedClient(null)} onSave={handleSaveClient} />
 
-      <ConfirmModal isOpen={deleteModal.isOpen} title="Pašalinti iš registro?" message={<>Ar tikrai norite pašalinti <span className="font-bold text-[#202124] dark:text-[#e8eaed]">„{deleteModal.name}“</span>? <br /><span className="text-blue-600 text-[12px] font-medium">Dėmesio: bus ištrinta kliento kortelė ir visi jos duomenys.</span></>} onConfirm={async () => { if (deleteModal.id) { await deleteClient(deleteModal.id); if (selectedClient?._id === deleteModal.id || selectedClient?.id === deleteModal.id) setSelectedClient(null); } setDeleteModal({ isOpen: false, id: null, name: '' }); }} onCancel={() => setDeleteModal({ isOpen: false, id: null, name: '' })} />
+      <ConfirmModal isOpen={deleteModal.isOpen} title="Pašalinti iš registro?" message={<>Ar tikrai norite pašalinti <span className="font-bold text-[#202124] dark:text-[#e8eaed]">„{deleteModal.name}“</span>? <br /><span className="text-blue-600 text-[12px] font-medium">Dėmesio: bus ištrinta kliento kortelė ir visi jos duomenys.</span></>} onConfirm={handleDeleteConfirm} onCancel={() => setDeleteModal({ isOpen: false, id: null, name: '' })} />
+
+      <AnimatePresence>
+        {status.msg && <StatusMessage type={status.type} msg={status.msg} onClose={() => setStatus({ type: '', msg: '' })} />}
+      </AnimatePresence>
     </>
   );
 };

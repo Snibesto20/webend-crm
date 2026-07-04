@@ -36,7 +36,7 @@ export const getOptionColorClass = (tag) => {
     return "text-green-600 dark:text-green-400 font-medium";
   }
   if (t === 'active client') {
-    return "text-blue-600 dark:text-blue-400 font-bold";
+    return "text-blue-600 dark:text-blue-400 font-medium";
   }
   if (t === 'archived client') {
     return "text-amber-800 dark:text-amber-500 font-medium";
