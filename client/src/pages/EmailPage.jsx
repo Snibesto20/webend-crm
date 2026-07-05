@@ -5,6 +5,7 @@ import { ClientRegistry } from '../components/ClientRegistry';
 import { MdSend, MdEmail, MdPerson, MdBusiness } from 'react-icons/md';
 import { StatusMessage } from '../components/StatusMessage';
 import { AnimatePresence } from 'framer-motion';
+import { ComponentHeader } from '../components/headers/ComponentHeader';
 
 export const EmailPage = () => {
   const { sendEmail, clients, addClient } = useStore();
@@ -82,8 +83,6 @@ export const EmailPage = () => {
     }
   };
 
-  const inputClass = "w-full px-3 py-2 text-[13px] rounded border border-[#dadce0] dark:border-[#5f6368] bg-white dark:bg-[#202124] text-[#202124] dark:text-[#e8eaed] focus:border-[#1a73e8] focus:outline-none transition-all";
-
   return (
     <div className="flex-1 flex flex-col h-screen bg-[#f8f9fa] dark:bg-[#1e1e1e] overflow-hidden">
       <EmailPageHeader />
@@ -92,24 +91,20 @@ export const EmailPage = () => {
           
           <div className="flex-1 max-w-2xl shrink-0">
             <div className="bg-white dark:bg-[#292a2d] border border-[#dadce0] dark:border-[#3c4043] rounded shadow-sm">
-              <div className="p-6 border-b border-[#dadce0] dark:border-[#3c4043] flex items-center gap-3">
-                <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
-                  <MdEmail size={24} className="text-[#1a73e8]" />
-                </div>
-                <h2 className="text-[16px] font-medium text-[#202124] dark:text-[#e8eaed]">Siųsti laišką</h2>
-              </div>
+              <ComponentHeader title="Siųsti laišką" icon={MdEmail} />
+              
               <form onSubmit={handleSubmit} noValidate={true} className="p-6 space-y-4">
                 <div className="space-y-1.5">
                   <label className="flex items-center gap-2 text-[11px] text-[#5f6368] dark:text-[#9aa0a6] tracking-wider">
                     <MdBusiness size={14} className="text-[#1a73e8]" /> Kliento pavadinimas
                   </label>
-                  <input type="text" className={`${inputClass} h-[38px]`} value={form.name} onChange={(e) => setForm({...form, name: e.target.value})} />
+                  <input type="text" className="input-base" value={form.name} onChange={(e) => setForm({...form, name: e.target.value})} />
                 </div>
                 <div className="space-y-1.5">
                   <label className="flex items-center gap-2 text-[11px] text-[#5f6368] dark:text-[#9aa0a6] tracking-wider">
                     <MdPerson size={14} className="text-[#1a73e8]" /> Kliento el. paštas
                   </label>
-                  <input type="text" className={`${inputClass} h-[38px]`} value={form.to} onChange={(e) => setForm({...form, to: e.target.value})} />
+                  <input type="text" className="input-base" value={form.to} onChange={(e) => setForm({...form, to: e.target.value})} />
                 </div>
                 <button type="submit" disabled={loading} className="w-full bg-[#1a73e8] hover:bg-[#1557b0] disabled:bg-gray-300 dark:disabled:bg-[#3c4043] text-white text-[13px] h-[38px] rounded transition-all shadow-sm active:scale-[0.98] flex items-center justify-center gap-2">
                   {loading ? "Vykdoma..." : <><MdSend size={16} /> Siųsti laišką</>}

@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
-import { MdSearch, MdPeople } from 'react-icons/md';
+import { MdPeople } from 'react-icons/md';
 import { ConfirmModal } from './ConfirmModal';
 import { ClientModal } from './ClientModal';
 import { AnimatePresence } from 'framer-motion';
 import { StatusMessage } from './StatusMessage';
+import { ComponentHeader } from '../components/headers/ComponentHeader';
 import { ERRORS } from '../config';
 
 export const ClientRegistry = ({ onSelect }) => {
@@ -60,11 +61,9 @@ export const ClientRegistry = ({ onSelect }) => {
 
     try {
       await deleteClient(targetId);
-      
       if ((selectedClient?._id === targetId) || (selectedClient?.id === targetId)) {
         setSelectedClient(null);
       }
-      
       setStatus({ type: 'success', msg: ERRORS.CLIENT_DELETE_SUCCESS });
     } catch (err) {
       const backendCode = err.message;
@@ -76,15 +75,15 @@ export const ClientRegistry = ({ onSelect }) => {
   return (
     <>
       <div className="h-full flex flex-col bg-white dark:bg-[#292a2d] rounded shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-[#dadce0] dark:border-[#3c4043] flex items-center gap-3 shrink-0">
-          <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded"><MdPeople size={24} className="text-[#1a73e8]" /></div>
-          <h2 className="text-[16px] font-medium text-[#202124] dark:text-[#e8eaed]">Klientų registras</h2>
-        </div>
+        <ComponentHeader title="Klientų registras" icon={MdPeople} />
+        
         <div className="p-4 border-b border-[#dadce0] dark:border-[#3c4043] bg-[#f8f9fa]/50 dark:bg-[#202124]/30 shrink-0">
-          <div className="relative">
-            <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-[#5f6368]" size={18} />
-            <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} className="w-full pl-9 pr-3 py-1.5 text-[13px] rounded border border-[#dadce0] dark:border-[#5f6368] bg-white dark:bg-[#202124] text-[#202124] dark:text-[#e8eaed] focus:border-[#1a73e8] focus:outline-none transition-colors" />
-          </div>
+          <input 
+            type="text" 
+            value={search} 
+            onChange={(e) => setSearch(e.target.value)} 
+            className="input-base pl-9 pr-3 h-[38px]" 
+          />
         </div>
         <div className="flex-1 overflow-y-auto custom-scrollbar">
           <ul className="divide-y divide-[#dadce0] dark:divide-[#3c4043]">
@@ -105,10 +104,18 @@ export const ClientRegistry = ({ onSelect }) => {
           </ul>
         </div>
       </div>
+      
+      <AnimatePresence>
+        {selectedClient && (
+          <ClientModal client={selectedClient} onClose={() => setSelectedClient(null)} onSave={handleSaveClient} />
+        )}
+      </AnimatePresence>
 
-      <ClientModal client={selectedClient} onClose={() => setSelectedClient(null)} onSave={handleSaveClient} />
-
-      <ConfirmModal isOpen={deleteModal.isOpen} title="Pašalinti iš registro?" message={<>Ar tikrai norite pašalinti <span className="font-bold text-[#202124] dark:text-[#e8eaed]">„{deleteModal.name}“</span>? <br /><span className="text-blue-600 text-[12px] font-medium">Dėmesio: bus ištrinta kliento kortelė ir visi jos duomenys.</span></>} onConfirm={handleDeleteConfirm} onCancel={() => setDeleteModal({ isOpen: false, id: null, name: '' })} />
+      <AnimatePresence>
+        {deleteModal.isOpen && (
+          <ConfirmModal title="Pašalinti iš registro?" message={<>Ar tikrai norite pašalinti <span className="font-bold text-[#202124] dark:text-[#e8eaed]">„{deleteModal.name}“</span>? <br /><span className="text-blue-600 text-[12px] font-medium">Dėmesio: bus ištrinta kliento kortelė ir visi jos duomenys.</span></>} onConfirm={handleDeleteConfirm} onCancel={() => setDeleteModal({ isOpen: false, id: null, name: '' })} />
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {status.msg && <StatusMessage type={status.type} msg={status.msg} onClose={() => setStatus({ type: '', msg: '' })} />}

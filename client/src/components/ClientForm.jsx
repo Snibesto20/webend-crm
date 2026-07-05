@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import { AnimatePresence } from 'framer-motion';
 import { StatusMessage } from './StatusMessage';
-import { ERRORS, INITIAL_TAGS, CLIENT_TAGS_CONFIG } from '../config';
+import { ComponentHeader } from './headers/ComponentHeader';
+import { ClientTagDropdown } from './ClientTagDropdown';
+import { ERRORS, INITIAL_TAGS } from '../config';
 import { MdPersonAdd, MdAdd, MdDelete, MdContactMail, MdPerson, MdMiscellaneousServices, MdBadge, MdNotes } from 'react-icons/md';
 
 const formatPhoneNumber = (contactStr) => {
@@ -46,15 +48,19 @@ export const ClientForm = () => {
   const [issubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
+    const nextTag = getDefaultTag();
     setFormData((prev) => ({
       ...prev,
-      tag: getDefaultTag()
+      tag: nextTag,
+      serviceNeeded: nextTag === 'unprocessed' ? '' : prev.serviceNeeded
     }));
   }, [filterType]);
 
   const isAdmin = user?.role === 'admin';
+  const isUnprocessed = formData.tag === 'unprocessed';
   const isDisapproved = formData.tag === 'disapproved';
-  const isGhosted = isDisapproved;
+  
+  const isGhosted = isDisapproved || isUnprocessed;
 
   const handleContactChange = (index, value) => {
     if (!isAdmin) return;
@@ -72,6 +78,14 @@ export const ClientForm = () => {
     if (!isAdmin) return;
     const newContacts = formData.contacts.filter((_, i) => i !== index);
     setFormData({ ...formData, contacts: newContacts.length ? newContacts : [''] });
+  };
+
+  const handleTagChange = (newTag) => {
+    setFormData((prev) => ({
+      ...prev,
+      tag: newTag,
+      serviceNeeded: newTag === 'unprocessed' ? '' : prev.serviceNeeded
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -93,11 +107,16 @@ export const ClientForm = () => {
       return;
     }
 
+    if (isUnprocessed && formData.serviceNeeded.trim()) {
+      setStatus({ type: 'error', msg: 'Klaida: Neapdorotam (unprocessed) klientui negalima priskirti paslaugos.' });
+      return;
+    }
+
     const formattedContacts = formData.contacts
       .map(c => formatPhoneNumber(c))
       .filter(c => c.trim() !== '');
 
-    if (formData.tag === 'unprocessed' && formattedContacts.length === 0) {
+    if (isUnprocessed && formattedContacts.length === 0) {
       setStatus({ type: 'error', msg: ERRORS.CLIENT_CONTACTS_REQUIRED_FOR_UNPROCESSED });
       return;
     }
@@ -108,7 +127,8 @@ export const ClientForm = () => {
       await addClient({
         ...formData,
         name: trimmedName.toUpperCase(),
-        contacts: formattedContacts
+        contacts: formattedContacts,
+        serviceNeeded: isUnprocessed ? '' : formData.serviceNeeded.trim()
       });
       
       setStatus({ type: 'success', msg: 'Naujas klientas pridėtas sėkmingai!' });
@@ -135,45 +155,31 @@ export const ClientForm = () => {
     }
   };
 
-  const inputClass = "w-full px-3 py-2 text-[13px] rounded border border-[#dadce0] dark:border-[#5f6368] bg-white dark:bg-[#202124] text-[#202124] dark:text-[#e8eaed] focus:border-[#1a73e8] focus:outline-none transition-all";
-  const ghostInput = "w-full px-3 py-2 text-[13px] rounded border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40 text-slate-400 dark:text-slate-600 cursor-not-allowed italic focus:outline-none";
-  const labelClass = "flex items-center gap-2 text-[11px] text-[#5f6368] dark:text-[#9aa0a6] tracking-wider";
-  const removeButtonClass = "p-1.5 text-slate-400 dark:text-slate-500 hover:text-[#1a73e8] dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-all inline-flex items-center justify-center shrink-0";
-  const asterisk = "text-[#5f6368] dark:text-[#9aa0a6] font-bold ml-0.5";
-
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-[#292a2d]">
-      <div className="p-6 border-b border-[#dadce0] dark:border-[#3c4043] flex items-center gap-3">
-        <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
-          <MdPersonAdd size={24} className="text-[#1a73e8]" />
-        </div>
-        <h2 className="text-[16px] font-medium text-[#202124] dark:text-[#e8eaed]">Naujas klientas</h2>
-      </div>
+    <div className="flex flex-col h-full bg-white dark:bg-[#292a2d] border border-[#dadce0] dark:border-[#3c4043] rounded shadow-sm">
+      <ComponentHeader title="Naujas klientas" icon={MdPersonAdd} />
       
       <div className={`flex-1 overflow-y-auto custom-scrollbar p-6 ${!isAdmin ? "opacity-60 pointer-events-none select-none" : ""}`}>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
-            <label className={labelClass}>
+            <label className="label-base">
               <MdPerson size={14} className="text-[#1a73e8]" /> 
-              <span>Kliento pavadinimas <span className={asterisk}>*</span></span>
+              <span>Kliento pavadinimas <span className="form-asterisk">*</span></span>
             </label>
-            <input type="text" disabled={!isAdmin} value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className={`${inputClass} h-[38px]`} />
+            <input type="text" disabled={!isAdmin} value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="input-base" />
           </div>
 
           <div className="space-y-1.5">
-            <label className={labelClass}>
+            <label className="label-base">
               <MdContactMail size={14} className="text-[#1a73e8]" /> 
-              <span>Kontaktai {formData.tag === 'unprocessed' && <span className={asterisk}>*</span>}</span>
+              <span>Kontaktai {isUnprocessed && <span className="form-asterisk">*</span>}</span>
             </label>
             <div className="space-y-2">
               {formData.contacts.map((contact, index) => (
-                <div key={index} className="flex gap-2 items-center">
-                  <div className="relative flex-1">
-                    <MdContactMail className="absolute left-2.5 top-2.5 text-slate-400" size={16} />
-                    <input type="text" disabled={!isAdmin} value={contact} onChange={(e) => handleContactChange(index, e.target.value)} className={`${inputClass} h-[38px] pl-9`} />
-                  </div>
+                <div key={index} className="flex gap-2 items-start">
+                  <input type="text" disabled={!isAdmin} value={contact} onChange={(e) => handleContactChange(index, e.target.value)} className="input-base pl-9" />
                   {formData.contacts.length > 1 && (
-                    <button type="button" disabled={!isAdmin} onClick={() => removeContactField(index)} className={`${removeButtonClass} h-[38px] w-[38px]`}><MdDelete size={16} /></button>
+                    <button type="button" disabled={!isAdmin} onClick={() => removeContactField(index)} className="btn-blue-icon h-[38px] w-[38px] flex items-center justify-center shrink-0"><MdDelete size={16} /></button>
                   )}
                 </div>
               ))}
@@ -184,26 +190,30 @@ export const ClientForm = () => {
           </div>
 
           <div className="space-y-1.5">
-            <label className={labelClass}>
+            <label className="label-base">
               <MdBadge size={14} className="text-[#1a73e8]" /> 
-              <span>Kliento žymė <span className={asterisk}>*</span></span>
+              <span>Kliento žymė <span className="form-asterisk">*</span></span>
             </label>
-            <select disabled={!isAdmin} value={formData.tag} onChange={(e) => setFormData({ ...formData, tag: e.target.value })} className={`${inputClass} h-[38px] capitalize font-medium ${CLIENT_TAGS_CONFIG[formData.tag]?.colorClass || ''}`}>
-              {INITIAL_TAGS.map(tag => <option key={tag} value={tag} className={CLIENT_TAGS_CONFIG[tag]?.colorClass || ''}>{CLIENT_TAGS_CONFIG[tag]?.translation || ''}</option>)}
-            </select>
+            <ClientTagDropdown value={formData.tag} onChange={handleTagChange} disabled={!isAdmin} tagsList={INITIAL_TAGS} />
           </div>
 
           <div className={`space-y-1.5 ${isGhosted ? "opacity-60" : "opacity-100"}`}>
-            <label className={labelClass}><MdMiscellaneousServices size={14} className="text-[#1a73e8]" /> Paslauga</label>
-            <input type="text" disabled={isGhosted || !isAdmin} value={formData.serviceNeeded} onChange={(e) => setFormData({ ...formData, serviceNeeded: e.target.value })} className={isGhosted ? `${ghostInput} h-[38px]` : `${inputClass} h-[38px]`} />
+            <label className="label-base"><MdMiscellaneousServices size={14} className="text-[#1a73e8]" /> Paslauga</label>
+            <input 
+              type="text" 
+              disabled={isGhosted || !isAdmin} 
+              value={formData.serviceNeeded} 
+              onChange={(e) => setFormData({ ...formData, serviceNeeded: e.target.value })} 
+              className={isGhosted ? "input-ghost" : "input-base"} 
+            />
           </div>
 
           <div className="space-y-1.5">
-            <label className={labelClass}><MdNotes size={14} className="text-[#1a73e8]" /> Užrašai</label>
-            <textarea rows="3" disabled={!isAdmin} value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} className={`${inputClass} resize-none`} />
+            <label className="label-base"><MdNotes size={14} className="text-[#1a73e8]" /> Užrašai</label>
+            <textarea disabled={!isAdmin} value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} className="input-base resize-none h-auto" rows="3" />
           </div>
 
-          <button type="submit" disabled={issubmitting || !isAdmin} className={`w-full text-[13px] h-[38px] rounded transition-all shadow-sm active:scale-[0.98] font-bold ${issubmitting ? "opacity-50 cursor-wait" : ""} ${!isAdmin ? "bg-slate-300 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed shadow-none" : "bg-[#1a73e8] hover:bg-[#1557b0] text-white"}`}>
+          <button type="submit" disabled={issubmitting || !isAdmin} className={`btn-blue w-full h-[38px] ${issubmitting ? "opacity-50 cursor-wait" : ""} ${!isAdmin ? "bg-slate-300 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed shadow-none hover:bg-slate-300 dark:hover:bg-slate-800" : ""}`}>
             {issubmitting ? "Vykdoma..." : "Išsaugoti kontaktą"}
           </button>
         </form>

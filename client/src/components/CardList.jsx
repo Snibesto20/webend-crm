@@ -1,17 +1,18 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, memo } from 'react';
 import { useStore } from '../store/useStore';
 import { TAG_PRIORITY } from "../config";
 import { ClientCard } from './ClientCard';
 import { MdViewModule } from 'react-icons/md';
 import { AnimatePresence } from 'framer-motion';
 import { StatusMessage } from './StatusMessage';
+import { ComponentHeader } from '../components/headers/ComponentHeader';
+
+const MemoizedClientCard = memo(ClientCard);
 
 export const CardList = () => {
   const clients = useStore((state) => state.clients);
   const showTrash = useStore((state) => state.showTrash);
   const filterType = useStore((state) => state.filterType);
-
-  // Globali pranešimų būsena visiems sąrašo veiksmams
   const [status, setStatus] = useState({ type: '', msg: '' });
 
   const sortedClients = useMemo(() => {
@@ -46,14 +47,11 @@ export const CardList = () => {
 
   return (
     <div className="h-full flex flex-col bg-white dark:bg-[#292a2d] border border-[#dadce0] dark:border-[#3c4043] rounded shadow-sm overflow-hidden relative">
-      <div className="p-6 border-b border-[#dadce0] dark:border-[#3c4043] flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
-            <MdViewModule size={24} className="text-[#1a73e8]" />
-          </div>
-          <h2 className="text-[16px] font-medium text-[#202124] dark:text-[#e8eaed]">Klientų sąrašas</h2>
+      <div className="border-b border-[#dadce0] dark:border-[#3c4043] flex items-center justify-between pr-6">
+        <div className="flex-1">
+          <ComponentHeader title="Klientų sąrašas" icon={MdViewModule} />
         </div>
-        <span className="text-[12px] bg-[#f1f3f4] dark:bg-[#3c4043] text-[#5f6368] dark:text-[#9aa0a6] px-2.5 py-0.5 rounded-full font-medium">
+        <span className="text-[12px] bg-[#f1f3f4] dark:bg-[#3c4043] text-[#5f6368] dark:text-[#9aa0a6] px-2.5 py-0.5 rounded-full font-medium shrink-0">
           {sortedClients.length}
         </span>
       </div>
@@ -66,7 +64,7 @@ export const CardList = () => {
         ) : (
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 auto-rows-max">
             {sortedClients.map(client => (
-              <ClientCard 
+              <MemoizedClientCard 
                 key={client._id || client.id} 
                 client={client} 
                 onDeleteSuccess={handleActionSuccess}
